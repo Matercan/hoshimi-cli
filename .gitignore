@@ -1,0 +1,8 @@
+# binaries
+
+build/
+*.out
+*-bin
+
+# generated files
+backup/

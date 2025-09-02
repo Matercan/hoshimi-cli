@@ -1,0 +1,278 @@
+#include <bits/stdc++.h>
+#include <cstdlib>
+#include <filesystem>
+#include <iostream>
+#include <ostream>
+#include <string>
+#include <vector>
+
+namespace fs = std::filesystem;
+
+struct Flag {
+  bool present;
+  std::vector<std::string> args;
+  std::string description;
+
+  Flag(bool on, const std::vector<std::string> &argss,
+       const std::string &desc = "")
+      : present(on), args(argss), description(desc) {}
+
+  // Alternative constructor for initializer list
+  Flag(bool on, std::initializer_list<std::string> argss,
+       const std::string &desc = "")
+      : present(on), args(argss), description(desc) {}
+
+  Flag() : present(false), description("") {}
+};
+
+void print_help(const std::string &program_name,
+                const std::vector<Flag> &config) {
+  std::cout << "Hoshimi - Hyprland Dotfiles Manager\n";
+  std::cout << "===================================\n\n";
+
+  std::cout << "USAGE:\n";
+  std::cout << "    " << program_name << " <command> [options]\n\n";
+
+  std::cout << "COMMANDS:\n";
+  std::cout << "    install     Install dotfiles by cloning repository and "
+               "creating symlinks\n";
+  std::cout << "    help        Show this help message\n\n";
+
+  std::cout << "OPTIONS:\n";
+
+  // Generate options from config vector
+  for (const auto &flag : config) {
+    if (!flag.args.empty()) {
+      std::cout << "    ";
+
+      // Print all aliases for this flag
+      for (size_t i = 0; i < flag.args.size(); ++i) {
+        std::cout << flag.args[i];
+        if (i < flag.args.size() - 1) {
+          std::cout << ", ";
+        }
+      }
+
+      // Add padding and description
+      std::cout << "    "
+                << (flag.description.empty() ? "[No description]"
+                                             : flag.description)
+                << "\n";
+    }
+  }
+  std::cout << "\n";
+
+  std::cout << "EXAMPLES:\n";
+  std::cout << "    " << program_name
+            << " install           # Install dotfiles silently\n";
+
+  // Generate examples based on available flags
+  for (const auto &flag : config) {
+    if (!flag.args.empty() && !flag.args[0].empty()) {
+      std::cout << "    " << program_name << " install " << flag.args[0]
+                << "        # Install with "
+                << (flag.description.empty()
+                        ? "this option"
+                        : flag.description.substr(0,
+                                                  flag.description.find(' ')))
+                << "\n";
+    }
+  }
+
+  std::cout << "    " << program_name
+            << " help              # Show this help\n\n";
+
+  std::cout << "DESCRIPTION:\n";
+  std::cout << "    Hoshimi manages Hyprland dotfiles by:\n";
+  std::cout
+      << "    1. Cloning the dotfiles repository to ~/.local/share/hoshimi\n";
+  std::cout << "    2. Backing up existing dotfiles to ./backup/\n";
+  std::cout << "    3. Creating symlinks from the repository to your home "
+               "directory\n\n";
+
+  std::cout << "PATHS:\n";
+  std::cout << "    Repository:     ~/.local/share/hoshimi (or "
+               "$XDG_DATA_HOME/hoshimi)\n";
+  std::cout << "    Backup:         ./backup/\n";
+  std::cout << "    Source:         "
+               "https://github.com/Matercan/hoshimi.git\n\n";
+}
+
+int main(int argc, char *argv[]) {
+  std::vector<Flag> config = {
+      Flag(false, {"-v", "--verbose"},
+           "Enable verbose output (show detailed operations)"),
+      Flag(false, {"-f", "--force"},
+           "Force overwrite existing files without backup"),
+      Flag(false, {"-h", "--help"}, "Show this help message")};
+  // Check if we have enough arguments
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " <command>" << std::endl;
+    return 1;
+  }
+
+  for (int i = 2; i < argc; i++) {
+    if (argc == 2)
+      break;
+
+    for (int j = 0; j < config.size(); j++) {
+      if (count(config[j].args.begin(), config[j].args.end(), argv[i]))
+        config[j].present = true;
+    }
+  }
+
+  std::string command = argv[1];
+
+  if (command == "help" || config[2].present) {
+    print_help(argv[0], config);
+  } else if (command == "install") {
+    // git clone the repo into ~/.local/share/hoshimi if not already there
+
+    std::string HOSHIMI_HOME;
+
+    // Safely get HOME environment variable
+    const char *home_env = getenv("HOME");
+    if (!home_env) {
+      std::cerr << "HOME environment variable not set" << std::endl;
+      return 1;
+    }
+    const std::string HOME = home_env;
+
+    // Check XDG_DATA_HOME
+    const char *xdg_data_home = getenv("XDG_DATA_HOME");
+    if (xdg_data_home && fs::exists(xdg_data_home)) {
+      HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
+    } else {
+      HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
+    }
+
+    if (!fs::exists(HOSHIMI_HOME)) {
+      const std::string DOWNLOAD_COMMAND =
+          "git clone https://github.com/Matercan/hoshimi-dots.git " +
+          HOSHIMI_HOME;
+
+      std::cout << "Running: " << DOWNLOAD_COMMAND << std::endl;
+      int result = system(DOWNLOAD_COMMAND.c_str());
+      if (result != 0) {
+        std::cerr << "Git clone failed" << std::endl;
+        return 1;
+      }
+    }
+
+    // move the current dotfiles into a backup folder
+    const fs::path DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
+    const fs::path BACKUP_DIRECTORY = fs::current_path() / "backup/";
+
+    if (fs::exists(DOTFILES_DIRECTORY)) {
+      // Ensure backup directory exists
+      if (!fs::exists(BACKUP_DIRECTORY)) {
+        fs::create_directories(BACKUP_DIRECTORY);
+      }
+
+      for (auto const &dir_entry :
+           fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+        if (config[0].present) {
+          std::cout << "Processing: " << dir_entry << std::endl;
+        }
+
+        fs::path const relative_path =
+            fs::relative(dir_entry.path(), DOTFILES_DIRECTORY);
+        fs::path const home_equivalent = HOME / relative_path;
+        fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
+
+        // First, handle backup of existing files/directories
+        if (fs::exists(home_equivalent)) {
+          // Create parent directories in backup if needed
+          fs::create_directories(backup_path.parent_path());
+
+          if (fs::is_directory(home_equivalent)) {
+            if (config[0].present) {
+              std::cout << "Backing up directory: " << home_equivalent << " to "
+                        << backup_path << std::endl;
+            }
+            // For directories, only backup if backup doesn't exist
+            if (!fs::exists(backup_path)) {
+              fs::create_directory(backup_path);
+            }
+          } else {
+            if (config[0].present) {
+              std::cout << "Backing up file: " << home_equivalent << " to "
+                        << backup_path << std::endl;
+            }
+            fs::rename(home_equivalent, backup_path);
+          }
+        }
+
+        // Now create symlinks/directories
+        if (fs::is_directory(dir_entry)) {
+          if (!fs::exists(home_equivalent)) {
+            if (config[0].present) {
+              std::cout << "Creating directory: " << home_equivalent
+                        << std::endl;
+            }
+            fs::create_directories(home_equivalent);
+          }
+        } else {
+          // For files, create symlink (file should be backed up by now)
+          if (config[0].present) {
+            std::cout << "Creating symlink: " << dir_entry << " -> "
+                      << home_equivalent << std::endl;
+          }
+
+          // Extra safety check
+          if (fs::exists(home_equivalent)) {
+            fs::remove(home_equivalent);
+          }
+
+          // Create parent directory if it doesn't exist
+          fs::create_directories(home_equivalent.parent_path());
+
+          if (!fs::is_symlink(home_equivalent))
+            fs::create_symlink(dir_entry, home_equivalent);
+        }
+      }
+    } else {
+      std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY
+                << std::endl;
+      return 1;
+    }
+
+    // TODO: rewrite the dotfiles in order to satisfy the config in
+    // ~/.config/hoshimi
+
+    std::cout << "Hoshimi Dotfiles installed ";
+    if (!config[1].present)
+      std::cout << "and files backed up";
+    std::cout << "." << std::endl;
+  } else if (command == "update") {
+
+    std::string HOSHIMI_HOME;
+
+    // Safely get HOME environment variable
+    const char *home_env = getenv("HOME");
+    if (!home_env) {
+      std::cerr << "HOME environment variable not set" << std::endl;
+      return 1;
+    }
+    const std::string HOME = home_env;
+
+    // Check XDG_DATA_HOME
+    const char *xdg_data_home = getenv("XDG_DATA_HOME");
+    if (xdg_data_home && fs::exists(xdg_data_home)) {
+      HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
+    } else {
+      HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
+    }
+
+    const std::string UPDATE_COMMAND = "cd " + HOSHIMI_HOME + " && git pull";
+    if (system(UPDATE_COMMAND.c_str()) == 0) {
+      return 0;
+    } else {
+      std::cout << "Hoshimi failed to update. Check if the directory "
+                << HOSHIMI_HOME << "exists or not";
+      return 2;
+    }
+  }
+
+  return 0;
+}
