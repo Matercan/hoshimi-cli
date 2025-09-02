@@ -167,6 +167,8 @@ int main(int argc, char *argv[]) {
       // Ensure backup directory exists
       if (!fs::exists(BACKUP_DIRECTORY)) {
         fs::create_directories(BACKUP_DIRECTORY);
+      } else {
+        fs::remove_all(BACKUP_DIRECTORY);
       }
 
       for (auto const &dir_entry :
