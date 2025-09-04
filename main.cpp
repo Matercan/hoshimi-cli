@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <cstdlib>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <ostream>
 #include <string>
@@ -98,6 +99,168 @@ void print_help(const std::string &program_name,
                "https://github.com/Matercan/hoshimi.git\n\n";
 }
 
+void print_progress_bar(float progress, size_t current, size_t total,
+                        int bar_width = 50) {
+  // Ensure progress is between 0 and 1
+  progress = std::max(0.0f, std::min(1.0f, progress));
+
+  int filled_width = static_cast<int>(progress * bar_width);
+
+  std::cout << "\r["; // \r returns cursor to beginning of line
+
+  // Print filled portion
+  for (int i = 0; i < filled_width; ++i) {
+    std::cout << "█";
+  }
+
+  // Print empty portion
+  for (int i = filled_width; i < bar_width; ++i) {
+    std::cout << "░";
+  }
+
+  // Print percentage and count
+  std::cout << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f)
+            << "% (" << current << "/" << total << ")";
+
+  std::cout.flush(); // Ensure immediate output
+
+  // Add newline when complete
+  if (progress >= 1.0f) {
+    std::cout << std::endl;
+  }
+}
+
+int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
+                     std::vector<Flag> config) {
+  // move the current dotfiles into a backup folder
+  const fs::path DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
+  const fs::path BACKUP_DIRECTORY = fs::current_path() / "backup/";
+
+  if (fs::exists(DOTFILES_DIRECTORY)) {
+    // Ensure backup directory exists
+    if (!fs::exists(BACKUP_DIRECTORY)) {
+      fs::create_directories(BACKUP_DIRECTORY);
+    } else {
+      fs::remove_all(BACKUP_DIRECTORY);
+      fs::create_directories(BACKUP_DIRECTORY);
+    }
+
+    // Count total files for progress
+    size_t total_files = 0;
+    for (auto const &dir_entry :
+         fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+      if (!fs::is_directory(dir_entry)) {
+        total_files++;
+      }
+    }
+
+    if (config[0].present) {
+      std::cout << "Found " << total_files << " files to process.\n"
+                << std::endl;
+    }
+
+    size_t processed = 0;
+    bool progress_bar_active = false;
+
+    for (auto const &dir_entry :
+         fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+
+      // Clear progress bar before verbose output
+      if (progress_bar_active && config[0].present) {
+        std::cout << "\r" << std::string(80, ' ') << "\r";
+        progress_bar_active = false;
+      }
+
+      if (config[0].present) {
+        std::cout << "Processing: " << dir_entry << std::endl;
+      }
+
+      fs::path const relative_path =
+          fs::relative(dir_entry.path(), DOTFILES_DIRECTORY);
+      fs::path const home_equivalent = HOME / relative_path;
+      fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
+
+      // First, handle backup of existing files/directories
+      if (fs::exists(home_equivalent)) {
+        // Create parent directories in backup if needed
+        fs::create_directories(backup_path.parent_path());
+
+        if (fs::is_directory(home_equivalent)) {
+          if (config[0].present) {
+            std::cout << "Backing up directory: " << home_equivalent << " to "
+                      << backup_path << std::endl;
+          }
+          // For directories, only backup if backup doesn't exist
+          if (!fs::exists(backup_path)) {
+            fs::create_directory(backup_path);
+          }
+        } else {
+          if (config[0].present) {
+            std::cout << "Backing up file: " << home_equivalent << " to "
+                      << backup_path << std::endl;
+          }
+          fs::rename(home_equivalent, backup_path);
+        }
+      }
+
+      // Now create symlinks/directories
+      if (fs::is_directory(dir_entry)) {
+        if (!fs::exists(home_equivalent)) {
+          if (config[0].present) {
+            std::cout << "Creating directory: " << home_equivalent << std::endl;
+          }
+          fs::create_directories(home_equivalent);
+        }
+      } else {
+        // For files, create symlink (file should be backed up by now)
+        if (config[0].present) {
+          std::cout << "Creating symlink: " << dir_entry << " -> "
+                    << home_equivalent << std::endl;
+        }
+
+        // Extra safety check
+        if (fs::exists(home_equivalent)) {
+          fs::remove(home_equivalent);
+        }
+
+        // Create parent directory if it doesn't exist
+        fs::create_directories(home_equivalent.parent_path());
+
+        if (!fs::is_symlink(home_equivalent))
+          fs::create_symlink(dir_entry, home_equivalent);
+      }
+
+      // Update progress (only for files)
+      if (!fs::is_directory(dir_entry)) {
+        processed++;
+
+        if (config[0].present) {
+          // Verbose mode: show simple progress
+          std::cout << "Progress: " << processed << "/" << total_files << " ("
+                    << int((float)processed / total_files * 100.0) << "%)"
+                    << std::endl;
+        } else {
+          // Non-verbose mode: show progress bar
+          float progress = (float)processed / total_files;
+          print_progress_bar(progress, processed, total_files);
+          progress_bar_active = true;
+        }
+      }
+    }
+
+    // Clear progress bar at the end
+    if (progress_bar_active) {
+      std::cout << "\r" << std::string(80, ' ') << "\r";
+    }
+
+    return 0;
+  } else {
+    std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY
+              << std::endl;
+    return 1;
+  }
+}
+
 int main(int argc, char *argv[]) {
   std::vector<Flag> config = {
       Flag(false, {"-v", "--verbose"},
@@ -159,90 +322,12 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // move the current dotfiles into a backup folder
-    const fs::path DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
-    const fs::path BACKUP_DIRECTORY = fs::current_path() / "backup/";
-
-    if (fs::exists(DOTFILES_DIRECTORY)) {
-      // Ensure backup directory exists
-      if (!fs::exists(BACKUP_DIRECTORY)) {
-        fs::create_directories(BACKUP_DIRECTORY);
-      } else {
-        fs::remove_all(BACKUP_DIRECTORY);
-      }
-
-      for (auto const &dir_entry :
-           fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-        if (config[0].present) {
-          std::cout << "Processing: " << dir_entry << std::endl;
-        }
-
-        fs::path const relative_path =
-            fs::relative(dir_entry.path(), DOTFILES_DIRECTORY);
-        fs::path const home_equivalent = HOME / relative_path;
-        fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
-
-        // First, handle backup of existing files/directories
-        if (fs::exists(home_equivalent)) {
-          // Create parent directories in backup if needed
-          fs::create_directories(backup_path.parent_path());
-
-          if (fs::is_directory(home_equivalent)) {
-            if (config[0].present) {
-              std::cout << "Backing up directory: " << home_equivalent << " to "
-                        << backup_path << std::endl;
-            }
-            // For directories, only backup if backup doesn't exist
-            if (!fs::exists(backup_path)) {
-              fs::create_directory(backup_path);
-            }
-          } else {
-            if (config[0].present) {
-              std::cout << "Backing up file: " << home_equivalent << " to "
-                        << backup_path << std::endl;
-            }
-            fs::rename(home_equivalent, backup_path);
-          }
-        }
-
-        // Now create symlinks/directories
-        if (fs::is_directory(dir_entry)) {
-          if (!fs::exists(home_equivalent)) {
-            if (config[0].present) {
-              std::cout << "Creating directory: " << home_equivalent
-                        << std::endl;
-            }
-            fs::create_directories(home_equivalent);
-          }
-        } else {
-          // For files, create symlink (file should be backed up by now)
-          if (config[0].present) {
-            std::cout << "Creating symlink: " << dir_entry << " -> "
-                      << home_equivalent << std::endl;
-          }
-
-          // Extra safety check
-          if (fs::exists(home_equivalent)) {
-            fs::remove(home_equivalent);
-          }
-
-          // Create parent directory if it doesn't exist
-          fs::create_directories(home_equivalent.parent_path());
-
-          if (!fs::is_symlink(home_equivalent))
-            fs::create_symlink(dir_entry, home_equivalent);
-        }
-      }
-    } else {
-      std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY
-                << std::endl;
-      return 1;
-    }
+    install_dotfiles(HOME, HOSHIMI_HOME, config);
 
     // TODO: rewrite the dotfiles in order to satisfy the config in
     // ~/.config/hoshimi
 
-    std::cout << "Hoshimi Dotfiles installed ";
+    std::cout << std::endl << "Hoshimi Dotfiles installed ";
     if (!config[1].present)
       std::cout << "and files backed up";
     std::cout << "." << std::endl;
