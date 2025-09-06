@@ -1,13 +1,20 @@
 #include <bits/stdc++.h>
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/constants.hpp>
+#include <boost/algorithm/string/find.hpp>
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
+
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <ostream>
 #include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
+std::vector<std::string> packages;
 
 struct Flag {
   bool present;
@@ -89,14 +96,9 @@ void print_help(const std::string &program_name,
       << "    1. Cloning the dotfiles repository to ~/.local/share/hoshimi\n";
   std::cout << "    2. Backing up existing dotfiles to ./backup/\n";
   std::cout << "    3. Creating symlinks from the repository to your home "
-               "directory\n\n";
-
-  std::cout << "PATHS:\n";
-  std::cout << "    Repository:     ~/.local/share/hoshimi (or "
-               "$XDG_DATA_HOME/hoshimi)\n";
-  std::cout << "    Backup:         ./backup/\n";
-  std::cout << "    Source:         "
-               "https://github.com/Matercan/hoshimi.git\n\n";
+               "directory\n";
+  std::cout << "    4. Enablng config via simiple cli tools / a single json "
+               "file \n\n";
 }
 
 void print_progress_bar(float progress, size_t current, size_t total,
@@ -179,6 +181,25 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
           fs::relative(dir_entry.path(), DOTFILES_DIRECTORY);
       fs::path const home_equivalent = HOME / relative_path;
       fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
+      std::string const config_relative_path = fs::relative(
+          dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
+
+      bool file_in_packages = false;
+
+      for (int i = 0; i < packages.size(); ++i) {
+
+        // Use standard string find instead of boost
+        if (config_relative_path.find(packages[i]) != std::string::npos) {
+          file_in_packages = true;
+          break;
+        }
+      }
+
+      bool file_installed =
+          (config[3].present && file_in_packages) || !config[3].present;
+
+      if (!file_installed)
+        continue;
 
       // First, handle backup of existing files/directories
       if (fs::exists(home_equivalent)) {
@@ -267,7 +288,12 @@ int main(int argc, char *argv[]) {
            "Enable verbose output (show detailed operations)"),
       Flag(false, {"-f", "--force"},
            "Force overwrite existing files without backup"),
-      Flag(false, {"-h", "--help"}, "Show this help message")};
+      Flag(false, {"-h", "--help"}, "Show this help message"),
+      Flag(false, {"-p", "--packages"},
+           "Onl install packages "
+           "for "
+           "example \n\t hypr,fastfetch,starship.toml,../.zshrc"
+           "\n\t hypr,nvim,btop")};
   // Check if we have enough arguments
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " <command>" << std::endl;
@@ -277,10 +303,20 @@ int main(int argc, char *argv[]) {
   for (int i = 2; i < argc; i++) {
     if (argc == 2)
       break;
+    int packagesArgument = 1;
 
     for (int j = 0; j < config.size(); j++) {
-      if (count(config[j].args.begin(), config[j].args.end(), argv[i]))
-        config[j].present = true;
+      if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {
+        config[j].present = !config[j].present;
+        if (j == 3)
+          packagesArgument = ++i;
+      }
+    }
+
+    if (i == packagesArgument) {
+      boost::split(packages, argv[i], boost::is_any_of(","),
+                   boost::token_compress_on);
+      std::cout << packages[0];
     }
   }
 
@@ -322,7 +358,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    install_dotfiles(HOME, HOSHIMI_HOME, config);
+    if (install_dotfiles(HOME, HOSHIMI_HOME, config) != 0)
+      return 1;
 
     // TODO: rewrite the dotfiles in order to satisfy the config in
     // ~/.config/hoshimi
@@ -358,6 +395,11 @@ int main(int argc, char *argv[]) {
       std::cout << "Hoshimi failed to update. Check if the directory "
                 << HOSHIMI_HOME << "exists or not";
       return 2;
+    }
+  } else if (command == "version") {
+    std::cout << "hoshimi v0.0.4" << std::endl;
+    if (config[0].present) {
+      std::cout << "Released on 5th September" << std::endl;
     }
   }
 
