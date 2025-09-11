@@ -3,16 +3,15 @@
 #include <boost/algorithm/string/find.hpp>
 #include <boost/algorithm/string/split.hpp> // Include for boost::split
 
-#include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <ostream>
 #include <string>
 #include <vector>
+
+#include "version.h"
 
 namespace fs = std::filesystem;
 std::vector<std::string> packages;
@@ -451,9 +450,9 @@ int main(int argc, char *argv[]) {
     system(("paru -S " + packagesToInstall).c_str());
 
   } else if (command == "version") {
-    std::cout << "hoshimi v0.1.5" << std::endl;
+    std::cout << "hoshimi v" << HOSHIMI_VERSION << std::endl;
     if (config[0].present) {
-      std::cout << "Released on 6th September" << std::endl;
+      std::cout << "Released on " << HOSHIMI_RELEASE_DATE << std::endl;
     }
   }
 
