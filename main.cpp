@@ -43,9 +43,14 @@ void print_help(const std::string &program_name,
   std::cout << "    " << program_name << " <command> [options]\n\n";
 
   std::cout << "COMMANDS:\n";
-  std::cout << "    install     Install dotfiles by cloning repository and "
+  std::cout << "    install       Install dotfiles by cloning repository and "
                "creating symlinks\n";
-  std::cout << "    help        Show this help message\n\n";
+  std::cout << "    help          Show this help message\n";
+  std::cout << "    arch-install  Install all the packages neccessary for this "
+               "shell using paru\n";
+  std::cout << "    version       Get version information of hoshimi\n";
+  std::cout << "    update        Update dotfiles to the most recent master "
+               "commit\n\n";
 
   std::cout << "OPTIONS:\n";
 
@@ -294,7 +299,7 @@ int main(int argc, char *argv[]) {
            "Force overwrite existing files without backup"),
       Flag(false, {"-h", "--help"}, "Show this help message"),
       Flag(false, {"-p", "--packages"},
-           "Onl install packages "
+           "Packages only install the packages "
            "for "
            "example \n\t hypr,fastfetch,starship.toml,../.zshrc"
            "\n\t hypr,nvim,btop")};
