@@ -1,11 +1,12 @@
-#include <bits/stdc++.h>
 #include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
 #include <boost/algorithm/string/constants.hpp>
 #include <boost/algorithm/string/find.hpp>
 #include <boost/algorithm/string/split.hpp> // Include for boost::split
 
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -249,6 +250,9 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
 
         if (!fs::is_symlink(home_equivalent))
           fs::create_symlink(dir_entry, home_equivalent);
+        else {
+          fs::remove(home_equivalent);
+        }
       }
 
       // Update progress (only for files)
@@ -396,10 +400,55 @@ int main(int argc, char *argv[]) {
                 << HOSHIMI_HOME << "exists or not";
       return 2;
     }
+  } else if (command == "arch-install") {
+    // Loop through all of the lnes in the lines of the file arch-packages
+
+    std::string packagesToInstall = "";
+
+    std::string HOSHIMI_HOME;
+
+    // Safely get HOME environment variable
+    const char *home_env = getenv("HOME");
+    if (!home_env) {
+      std::cerr << "HOME environment variable not set" << std::endl;
+      return 1;
+    }
+    const std::string HOME = home_env;
+
+    // Check XDG_DATA_HOME
+    const char *xdg_data_home = getenv("XDG_DATA_HOME");
+    if (xdg_data_home && fs::exists(xdg_data_home)) {
+      HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
+    } else {
+      HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
+    }
+
+    std::ifstream f(HOSHIMI_HOME + "/archpackages.txt");
+
+    if (!f.is_open()) {
+      std::cerr << "Error opening the file!";
+      return 3;
+    }
+
+    // Add them to a single linie string
+
+    std::string s;
+    while (getline(f, s)) {
+      packagesToInstall += s + " ";
+      if (config[0].present)
+        std::cout << "Going to install: " << s << std::endl;
+    }
+
+    f.close();
+
+    // Install the packages the packages
+
+    system(("paru -S " + packagesToInstall).c_str());
+
   } else if (command == "version") {
-    std::cout << "hoshimi v0.0.4" << std::endl;
+    std::cout << "hoshimi v0.1.5" << std::endl;
     if (config[0].present) {
-      std::cout << "Released on 5th September" << std::endl;
+      std::cout << "Released on 6th September" << std::endl;
     }
   }
 

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$defs": {
+    "globals": {
+      "wallpaperDirectory": {
+        "type": "string",
+        "description": "The path of the directory wherein your wallpapers are stored\nThis is used so that you don't need to type the full path for the wallpaper variable",
+        "examples": [
+          "~/Pictures/wallpapers/",
+          "~/.local/share/hoshimi/assets/",
+          "~/Pictures"
+        ]
+      },
+      "iconDirectory": {
+        "type": "string",
+        "description": "The path to the icons that you are using",
+        "examples": [
+          "/usr/share/icons/candy-icons/",
+          "~/.local/share/hicolor",
+          "/usr/share/cons/Adwaita"
+        ]
+      }
+    },
+    "config": {
+      "type": "string",
+      "descrption": "The file in ~/.config/hoshimi/themes that houses your theme"
+    },
+    "configOverrides": {
+      "theme": {
+        "oneOf": [
+          "warm",
+          "dark",
+          "light"
+        ]
+      },
+      "colorscheme": {
+        "oneOf": [
+          "generated",
+          "dracula",
+          "gruvbox",
+          "catppucin",
+          "tokyo-night",
+          "nightfox",
+          "onedark"
+        ]
+      },
+      "wallpaper": {
+        "type": "string",
+        "description": "The wallpaper path, or its relatve path to the wallpaperDirectory / home",
+        "examples": [
+          "~/Pictures/Wallpaper/wallpaper.png",
+          "nord_car.gif",
+          "silksong.jpeg"
+        ]
+      }
+    }
+  }
+}
