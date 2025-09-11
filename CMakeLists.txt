@@ -15,4 +15,10 @@ configure_file(
 )
 
 add_executable(Hoshimi src/main.cpp)
+
+# Set the output directory to bin/
+set_target_properties(Hoshimi PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+
 target_include_directories(Hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
