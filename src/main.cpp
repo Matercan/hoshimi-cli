@@ -21,20 +21,15 @@ struct Flag {
   std::vector<std::string> args;
   std::string description;
 
-  Flag(bool on, const std::vector<std::string> &argss,
-       const std::string &desc = "")
-      : present(on), args(argss), description(desc) {}
+  Flag(bool on, const std::vector<std::string> &argss, const std::string &desc = "") : present(on), args(argss), description(desc) {}
 
   // Alternative constructor for initializer list
-  Flag(bool on, std::initializer_list<std::string> argss,
-       const std::string &desc = "")
-      : present(on), args(argss), description(desc) {}
+  Flag(bool on, std::initializer_list<std::string> argss, const std::string &desc = "") : present(on), args(argss), description(desc) {}
 
   Flag() : present(false), description("") {}
 };
 
-void print_help(const std::string &program_name,
-                const std::vector<Flag> &config) {
+void print_help(const std::string &program_name, const std::vector<Flag> &config) {
   std::cout << "Hoshimi - Hyprland Dotfiles Manager\n";
   std::cout << "===================================\n\n";
 
@@ -67,38 +62,27 @@ void print_help(const std::string &program_name,
       }
 
       // Add padding and description
-      std::cout << "    "
-                << (flag.description.empty() ? "[No description]"
-                                             : flag.description)
-                << "\n";
+      std::cout << "    " << (flag.description.empty() ? "[No description]" : flag.description) << "\n";
     }
   }
   std::cout << "\n";
 
   std::cout << "EXAMPLES:\n";
-  std::cout << "    " << program_name
-            << " install           # Install dotfiles silently\n";
+  std::cout << "    " << program_name << " install           # Install dotfiles silently\n";
 
   // Generate examples based on available flags
   for (const auto &flag : config) {
     if (!flag.args.empty() && !flag.args[0].empty()) {
-      std::cout << "    " << program_name << " install " << flag.args[0]
-                << "        # Install with "
-                << (flag.description.empty()
-                        ? "this option"
-                        : flag.description.substr(0,
-                                                  flag.description.find(' ')))
-                << "\n";
+      std::cout << "    " << program_name << " install " << flag.args[0] << "        # Install with "
+                << (flag.description.empty() ? "this option" : flag.description.substr(0, flag.description.find(' '))) << "\n";
     }
   }
 
-  std::cout << "    " << program_name
-            << " help              # Show this help\n\n";
+  std::cout << "    " << program_name << " help              # Show this help\n\n";
 
   std::cout << "DESCRIPTION:\n";
   std::cout << "    Hoshimi manages Hyprland dotfiles by:\n";
-  std::cout
-      << "    1. Cloning the dotfiles repository to ~/.local/share/hoshimi\n";
+  std::cout << "    1. Cloning the dotfiles repository to ~/.local/share/hoshimi\n";
   std::cout << "    2. Backing up existing dotfiles to ./backup/\n";
   std::cout << "    3. Creating symlinks from the repository to your home "
                "directory\n";
@@ -106,8 +90,7 @@ void print_help(const std::string &program_name,
                "file \n\n";
 }
 
-void print_progress_bar(float progress, size_t current, size_t total,
-                        int bar_width = 50) {
+void print_progress_bar(float progress, size_t current, size_t total, int bar_width = 50) {
   // Ensure progress is between 0 and 1
   progress = std::max(0.0f, std::min(1.0f, progress));
 
@@ -126,8 +109,7 @@ void print_progress_bar(float progress, size_t current, size_t total,
   }
 
   // Print percentage and count
-  std::cout << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f)
-            << "% (" << current << "/" << total << ")";
+  std::cout << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f) << "% (" << current << "/" << total << ")";
 
   std::cout.flush(); // Ensure immediate output
 
@@ -137,8 +119,7 @@ void print_progress_bar(float progress, size_t current, size_t total,
   }
 }
 
-int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
-                     std::vector<Flag> config) {
+int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME, std::vector<Flag> config) {
   // move the current dotfiles into a backup folder
   const fs::path DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
   const fs::path BACKUP_DIRECTORY = fs::current_path() / "backup/";
@@ -154,23 +135,20 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
 
     // Count total files for progress
     size_t total_files = 0;
-    for (auto const &dir_entry :
-         fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+    for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
       if (!fs::is_directory(dir_entry)) {
         total_files++;
       }
     }
 
     if (config[0].present) {
-      std::cout << "Found " << total_files << " files to process.\n"
-                << std::endl;
+      std::cout << "Found " << total_files << " files to process.\n" << std::endl;
     }
 
     size_t processed = 0;
     bool progress_bar_active = false;
 
-    for (auto const &dir_entry :
-         fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+    for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
 
       // Clear progress bar before verbose output
       if (progress_bar_active && config[0].present) {
@@ -182,12 +160,10 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
         std::cout << "Processing: " << dir_entry << std::endl;
       }
 
-      fs::path const relative_path =
-          fs::relative(dir_entry.path(), DOTFILES_DIRECTORY);
+      fs::path const relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY);
       fs::path const home_equivalent = HOME / relative_path;
       fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
-      std::string const config_relative_path = fs::relative(
-          dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
+      std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
 
       bool file_in_packages = false;
 
@@ -200,8 +176,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
         }
       }
 
-      bool file_installed =
-          (config[3].present && file_in_packages) || !config[3].present;
+      bool file_installed = (config[3].present && file_in_packages) || !config[3].present;
 
       if (!file_installed)
         continue;
@@ -213,8 +188,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
 
         if (fs::is_directory(home_equivalent)) {
           if (config[0].present) {
-            std::cout << "Backing up directory: " << home_equivalent << " to "
-                      << backup_path << std::endl;
+            std::cout << "Backing up directory: " << home_equivalent << " to " << backup_path << std::endl;
           }
           // For directories, only backup if backup doesn't exist
           if (!fs::exists(backup_path)) {
@@ -222,8 +196,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
           }
         } else {
           if (config[0].present) {
-            std::cout << "Backing up file: " << home_equivalent << " to "
-                      << backup_path << std::endl;
+            std::cout << "Backing up file: " << home_equivalent << " to " << backup_path << std::endl;
           }
           fs::rename(home_equivalent, backup_path);
         }
@@ -240,8 +213,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
       } else {
         // For files, create symlink (file should be backed up by now)
         if (config[0].present) {
-          std::cout << "Creating symlink: " << dir_entry << " -> "
-                    << home_equivalent << std::endl;
+          std::cout << "Creating symlink: " << dir_entry << " -> " << home_equivalent << std::endl;
         }
 
         // Extra safety check
@@ -265,9 +237,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
 
         if (config[0].present) {
           // Verbose mode: show simple progress
-          std::cout << "Progress: " << processed << "/" << total_files << " ("
-                    << int((float)processed / total_files * 100.0) << "%)"
-                    << std::endl;
+          std::cout << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << std::endl;
         } else {
           // Non-verbose mode: show progress bar
           float progress = (float)processed / total_files;
@@ -284,24 +254,20 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME,
 
     return 0;
   } else {
-    std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY
-              << std::endl;
+    std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY << std::endl;
     return 1;
   }
 }
 
 int main(int argc, char *argv[]) {
-  std::vector<Flag> config = {
-      Flag(false, {"-v", "--verbose"},
-           "Enable verbose output (show detailed operations)"),
-      Flag(false, {"-f", "--force"},
-           "Force overwrite existing files without backup"),
-      Flag(false, {"-h", "--help"}, "Show this help message"),
-      Flag(false, {"-p", "--packages"},
-           "Packages only install the packages "
-           "for "
-           "example \n\t hypr,fastfetch,starship.toml,../.zshrc"
-           "\n\t hypr,nvim,btop")};
+  std::vector<Flag> config = {Flag(false, {"-v", "--verbose"}, "Enable verbose output (show detailed operations)"),
+                              Flag(false, {"-f", "--force"}, "Force overwrite existing files without backup"),
+                              Flag(false, {"-h", "--help"}, "Show this help message"),
+                              Flag(false, {"-p", "--packages"},
+                                   "Packages only install the packages "
+                                   "for "
+                                   "example \n\t hypr,fastfetch,starship.toml,../.zshrc"
+                                   "\n\t hypr,nvim,btop")};
   // Check if we have enough arguments
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " <command>" << std::endl;
@@ -322,8 +288,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (i == packagesArgument) {
-      boost::split(packages, argv[i], boost::is_any_of(","),
-                   boost::token_compress_on);
+      boost::split(packages, argv[i], boost::is_any_of(","), boost::token_compress_on);
       std::cout << packages[0];
     }
   }
@@ -354,9 +319,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!fs::exists(HOSHIMI_HOME)) {
-      const std::string DOWNLOAD_COMMAND =
-          "git clone https://github.com/Matercan/hoshimi-dots.git " +
-          HOSHIMI_HOME;
+      const std::string DOWNLOAD_COMMAND = "git clone https://github.com/Matercan/hoshimi-dots.git " + HOSHIMI_HOME;
 
       std::cout << "Running: " << DOWNLOAD_COMMAND << std::endl;
       int result = system(DOWNLOAD_COMMAND.c_str());
@@ -400,8 +363,7 @@ int main(int argc, char *argv[]) {
     if (system(UPDATE_COMMAND.c_str()) == 0) {
       return 0;
     } else {
-      std::cout << "Hoshimi failed to update. Check if the directory "
-                << HOSHIMI_HOME << "exists or not";
+      std::cout << "Hoshimi failed to update. Check if the directory " << HOSHIMI_HOME << "exists or not";
       return 2;
     }
   } else if (command == "arch-install") {
