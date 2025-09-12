@@ -1,0 +1,398 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "bar": {
+      "type": "object",
+      "properties": {
+        "globals": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "string",
+              "enum": [
+                "left",
+                "right"
+              ]
+            }
+          },
+          "required": [
+            "visible",
+            "position"
+          ]
+        },
+        "WorkspaceWidget": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "position": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "position"
+          ]
+        },
+        "WindowTitle": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "position": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "position"
+          ]
+        },
+        "Taskbar": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "position": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "position"
+          ]
+        },
+        "Cava": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "position": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "position"
+          ]
+        },
+        "TrayWidget": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "position": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "position"
+          ]
+        },
+        "Widgets": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "posiiton": {
+              "type": "number"
+            },
+            "BatteryWidget": {
+              "type": "object",
+              "properties": {
+                "visible": {
+                  "type": "boolean"
+                },
+                "location": {
+                  "type": "string",
+                  "enum": [
+                    "top",
+                    "bottom",
+                    "center"
+                  ]
+                }
+              },
+              "required": [
+                "visible",
+                "location"
+              ]
+            },
+            "ClockWidget": {
+              "type": "object",
+              "properties": {
+                "visible": {
+                  "type": "boolean"
+                },
+                "location": {
+                  "type": "string",
+                  "enum": [
+                    "top",
+                    "bottom",
+                    "center"
+                  ]
+                }
+              },
+              "required": [
+                "visible",
+                "location"
+              ]
+            },
+            "VolumeWidget": {
+              "type": "object",
+              "properties": {
+                "visible": {
+                  "type": "boolean"
+                },
+                "location": {
+                  "type": "string",
+                  "enum": [
+                    "top",
+                    "bottom",
+                    "center"
+                  ]
+                }
+              },
+              "required": [
+                "visible",
+                "location"
+              ]
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "posiiton",
+            "BatteryWidget",
+            "ClockWidget",
+            "VolumeWidget"
+          ]
+        },
+        "DevButtons": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "boolean"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom",
+                "center"
+              ]
+            },
+            "position": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "visible",
+            "location",
+            "position"
+          ]
+        }
+      },
+      "required": [
+        "globals",
+        "WorkspaceWidget",
+        "WindowTitle",
+        "Taskbar",
+        "Cava",
+        "TrayWidget",
+        "Widgets",
+        "DevButtons"
+      ]
+    },
+    "colors": {
+      "type": "object",
+      "description": "set of colors for the configuration to use based on xterm colors (https://www.ditig.com/256-colors-cheat-sheet)",
+      "properties": {
+        "backgroundColor": {
+          "type": "string"
+        },
+        "foregroundColor": {
+          "type": "string",
+          "description": "text color"
+        },
+        "paletteColor1": {
+          "type": "string",
+          "description": "close to black (#000000)"
+        },
+        "paletteColor2": {
+          "type": "string",
+          "description": "close to maroon (#800000)"
+        },
+        "paletteColor3": {
+          "type": "string",
+          "description": "close to green (#008000)"
+        },
+        "paletteColor4": {
+          "type": "string",
+          "description": "close to olive (#808000)"
+        },
+        "paletteColor5": {
+          "type": "string",
+          "description": "close to navy (#000080)"
+        },
+        "paletteColor6": {
+          "type": "string",
+          "description": "close to purple (#800080)"
+        },
+        "paletteColor7": {
+          "type": "string",
+          "description": "close to teal (#008080)"
+        },
+        "paletteColor8": {
+          "type": "string",
+          "description": "close to silver (#c0c0c0)"
+        },
+        "paletteColor9": {
+          "type": "string",
+          "description": "close to grey (#808080)"
+        },
+        "paletteColor10": {
+          "type": "string",
+          "description": "close to red (#ff0000)"
+        },
+        "paletteColor11": {
+          "type": "string",
+          "description": "close to lime (#00ff00)"
+        },
+        "paletteColor12": {
+          "type": "string",
+          "description": "close to yellow (#ffff00)"
+        },
+        "paletteColor13": {
+          "type": "string",
+          "description": "close to blue (#0000ff)"
+        },
+        "paletteColor14": {
+          "type": "string",
+          "description": "close to fuchsia (#ff00ff)"
+        },
+        "paletteColor15": {
+          "type": "string",
+          "description": "close to aqua (#00ffff)"
+        },
+        "paletteColor16": {
+          "type": "string",
+          "description": "close to white (#ffffff)"
+        },
+        "activeColor": {
+          "type": "number",
+          "description": "the palette color which describes the color when it is active, defaults  to color 5",
+          "maximum": 16
+        },
+        "selectedColor": {
+          "type": "number",
+          "description": "the palette color which describes the color when the mouse is over it, defaults to color 6",
+          "maximum": 16
+        },
+        "iconColor": {
+          "type": "number",
+          "description": "the palette color which describes the color of icons, defaults to color 13",
+          "maximum": 16
+        },
+        "errorCOlor": {
+          "type": "number",
+          "description": "the palette color which describes when there is an error, defaults to color 2",
+          "maximum": 16
+        },
+        "passwordColor": {
+          "type": "number",
+          "description": "the palette color of the password, defaults to color 4",
+          "maximum": 16
+        },
+        "borderColor": {
+          "type": "number",
+          "description": "the palette color of borders, defaults to color 5",
+          "maximum": 16
+        }
+      },
+      "required": [
+        "backgroundColor",
+        "foregroundColor",
+        "paletteColor1",
+        "paletteColor2",
+        "paletteColor3",
+        "paletteColor4",
+        "paletteColor5",
+        "paletteColor6",
+        "paletteColor7",
+        "paletteColor8",
+        "paletteColor9",
+        "paletteColor10",
+        "paletteColor11",
+        "paletteColor12",
+        "paletteColor13",
+        "paletteColor14",
+        "paletteColor15",
+        "paletteColor16"
+      ]
+    }
+  }
+}
