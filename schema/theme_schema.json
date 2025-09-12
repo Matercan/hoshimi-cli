@@ -278,6 +278,36 @@
           "type": "string",
           "description": "text color"
         },
+        "activeColor": {
+          "type": "number",
+          "description": "the palette color which describes the color when it is active, defaults  to color 5",
+          "maximum": 16
+        },
+        "selectedColor": {
+          "type": "number",
+          "description": "the palette color which describes the color when the mouse is over it, defaults to color 6",
+          "maximum": 16
+        },
+        "iconColor": {
+          "type": "number",
+          "description": "the palette color which describes the color of icons, defaults to color 13",
+          "maximum": 16
+        },
+        "errorColor": {
+          "type": "number",
+          "description": "the palette color which describes when there is an error, defaults to color 2",
+          "maximum": 16
+        },
+        "passwordColor": {
+          "type": "number",
+          "description": "the palette color of the password, defaults to color 4",
+          "maximum": 16
+        },
+        "borderColor": {
+          "type": "number",
+          "description": "the palette color of borders, defaults to color 5",
+          "maximum": 16
+        },
         "paletteColor1": {
           "type": "string",
           "description": "close to black (#000000)"
@@ -341,36 +371,6 @@
         "paletteColor16": {
           "type": "string",
           "description": "close to white (#ffffff)"
-        },
-        "activeColor": {
-          "type": "number",
-          "description": "the palette color which describes the color when it is active, defaults  to color 5",
-          "maximum": 16
-        },
-        "selectedColor": {
-          "type": "number",
-          "description": "the palette color which describes the color when the mouse is over it, defaults to color 6",
-          "maximum": 16
-        },
-        "iconColor": {
-          "type": "number",
-          "description": "the palette color which describes the color of icons, defaults to color 13",
-          "maximum": 16
-        },
-        "errorCOlor": {
-          "type": "number",
-          "description": "the palette color which describes when there is an error, defaults to color 2",
-          "maximum": 16
-        },
-        "passwordColor": {
-          "type": "number",
-          "description": "the palette color of the password, defaults to color 4",
-          "maximum": 16
-        },
-        "borderColor": {
-          "type": "number",
-          "description": "the palette color of borders, defaults to color 5",
-          "maximum": 16
         }
       },
       "required": [

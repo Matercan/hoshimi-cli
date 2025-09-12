@@ -4,5 +4,8 @@ build/
 *.out
 *-bin
 
+# test filees
+*test*
+
 # generated files
 backup/
