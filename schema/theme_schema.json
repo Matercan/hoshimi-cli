@@ -158,7 +158,7 @@
                 "center"
               ]
             },
-            "posiiton": {
+            "positon": {
               "type": "number"
             },
             "BatteryWidget": {
@@ -225,7 +225,7 @@
           "required": [
             "visible",
             "location",
-            "posiiton",
+            "positon",
             "BatteryWidget",
             "ClockWidget",
             "VolumeWidget"
