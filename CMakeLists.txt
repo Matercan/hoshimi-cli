@@ -14,11 +14,16 @@ configure_file(
     @ONLY
 )
 
+find_package(Boost REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(jsoncpp REQUIRED jsoncpp)
+
 add_executable(Hoshimi src/main.cpp)
 
-# Set the output directory to bin/
 set_target_properties(Hoshimi PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
 
 target_include_directories(Hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(Hoshimi PRIVATE Boost::boost ${jsoncpp_LIBRARIES})
+target_include_directories(Hoshimi PRIVATE ${jsoncpp_INCLUDE_DIRS})
