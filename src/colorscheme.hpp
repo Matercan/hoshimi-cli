@@ -40,6 +40,9 @@ public:
        << static_cast<int>(b);
     return ss.str();
   }
+
+  bool operator==(const Color &other) const { return this->toHex() == other.toHex(); }
+  bool operator!=(const Color &other) const { return !(*this == other); }
 };
 
 class Colorscheme {
@@ -54,6 +57,7 @@ public:
   Color borderColor;
 
   std::vector<Color> palette;
+  std::vector<Color> main;
 
   Colorscheme() {}
   Colorscheme(Color mainColors[8], std::vector<Color> paletteColors) {
@@ -67,6 +71,10 @@ public:
     errorColor = mainColors[5];
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
+
+    main.reserve(8);
+    for (int i = 0; i < 8; i++)
+      main.push_back(mainColors[i]);
   }
 
   Colorscheme(Color mainColors[8]) {

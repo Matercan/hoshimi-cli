@@ -70,18 +70,15 @@ private:
 
 public:
   ColorsHandler() {
-    std::cout << "ColorsHandler constructor started" << std::endl;
 
     if (!THEME_CONFIG_JSON.isMember("colors")) {
       throw std::runtime_error("No colors section found in theme config");
     }
 
     colors = THEME_CONFIG_JSON["colors"];
-    std::cout << "Colors loaded: " << colors["backgroundColor"].asString() << std::endl;
   }
 
   Colorscheme getColors() {
-    std::cout << "getColors() called" << std::endl;
 
     // Use safer access methods
     Color backgroundColor = colors["backgroundColor"].asString();

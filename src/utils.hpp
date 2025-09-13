@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <vector>
 
 class Utils {
 public:
@@ -59,4 +60,7 @@ public:
       std::cout << std::endl;
     }
   }
+
+  std::vector<std::string> COLOR_NAMES = {"backgroundColor", "foregroundColor", "selectedColor", "activeColor",
+                                          "iconColor",       "errorColor",      "passwordColor", "borderColor"};
 };

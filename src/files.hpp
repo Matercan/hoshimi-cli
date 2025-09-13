@@ -13,7 +13,7 @@
 
 namespace fs = std::filesystem;
 
-enum FileType { QS, GHOSTTY, ALACRITTY, KITTY, CAVA };
+enum FileType { QS, VALUE_PAIR, DEFAULT_VALUE };
 
 class FilesManager {
 private:
@@ -68,7 +68,7 @@ public:
 
     std::string s;
     std::getline(f, s);
-    return s.find("Hoshimi") == std::string::npos; // if Hoshimi is on the top line, it is modifiable
+    return s.find("Hoshimi") != std::string::npos; // if Hoshimi is on the top line, it is modifiable
   }
 
   fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
@@ -192,7 +192,10 @@ public:
           // Create parent directory if it doesn't exist
           fs::create_directories(home_equivalent.parent_path());
 
-          if (!fs::is_symlink(dir_entry))
+          if (isModifiable(dir_entry.path())) {
+            std::cout << "File " << dir_entry << " modifiable by Hoshimi, symlink will not be created" << std::endl;
+            fs::copy(dir_entry, home_equivalent);
+          } else if (!fs::is_symlink(dir_entry))
             fs::create_symlink(dir_entry, home_equivalent);
           else {
             fs::remove(home_equivalent);
@@ -230,9 +233,6 @@ public:
 
 class WriterBase {
 public:
-  std::string newContents;
-  std::string fileContents;
-
   WriterBase(fs::path writingFile) {
     file = writingFile;
 
@@ -250,21 +250,77 @@ public:
 
     f.close();
     newContents = fileContents;
+    filetype = FileType::DEFAULT_VALUE;
   }
-  WriterBase() {};
+  WriterBase() { filetype = FileType::DEFAULT_VALUE; };
+  WriterBase(FileType ft) { filetype = ft; }
+  WriterBase(fs::path writingFile, FileType ft) {
+    file = writingFile;
 
-  bool replaceValue(std::string key, std::string value, FileType fileType) {
+    std::ifstream f(file.string());
+
+    if (!f.is_open()) {
+      std::cerr << "Error opening the file: " << file.filename() << std::endl;
+      std::cout << "Full file path: " << file.string() << std::endl;
+    }
+
+    std::string s;
+    while (std::getline(f, s)) {
+      fileContents += s + "\n";
+    }
+
+    f.close();
+    newContents = fileContents;
+    filetype = ft;
+  }
+
+  bool writeToFile() {
+    std::ofstream o(file.string());
+
+    if (!o.is_open()) {
+      std::cerr << "file could not open: " << file.filename() << std::endl;
+      std::cout << "Full path: " << file.string() << std::endl;
+      return false;
+    }
+
+    o << newContents;
+
+    o.close();
+    return true;
+  }
+
+  void revert() {
+    std::ofstream o(file.string());
+
+    if (!o.is_open()) {
+      std::cerr << "file could not open: " << file.filename() << std::endl;
+      std::cout << "Full path: " << file.string() << std::endl;
+      return;
+    }
+
+    o << fileContents;
+
+    o.close();
+  }
+
+  fs::path getFile() { return file; }
+
+  bool replaceValue(std::string key, std::string value, FileType *fileType) {
     std::regex regex;
     std::string regexReplacement;
 
-    if (fileType == FileType::QS) {
-      // Handles multiple formats and whitespace variations:
-      // 1. property string key: "value"
-      // 2. property string key:"value"
-      // 3. key: "value" (for simple assignments)
+    if (filetype != FileType::DEFAULT_VALUE)
+      fileType = &filetype;
+
+    if (*fileType == FileType::QS) {
       std::string pattern = "((?:property\\s+\\w+\\s+)?" + key + "\\s*:\\s*)\"[^\"]*\"";
       regex = std::regex(pattern);
       regexReplacement = "$1\"" + value + "\"";
+    }
+    if (*fileType == FileType::VALUE_PAIR) {
+      std::string pattern = "(^|\\n)(" + key + "\\s*=\\s*)([^\\n]*)";
+      regex = std::regex(pattern);
+      regexReplacement = "$1$2" + value;
     }
 
     std::string oldContents = newContents;
@@ -274,6 +330,9 @@ public:
 
 private:
   fs::path file;
+  std::string newContents;
+  std::string fileContents;
+  FileType filetype;
 };
 
 class QuickshellWriter {
@@ -285,12 +344,44 @@ private:
 public:
   QuickshellWriter() {
     colors = ColorsHandler().getColors();
-    colorsWriter = WriterBase(files.getQuickshellFolder() / "functions/Colors.qml");
+    colorsWriter = WriterBase(files.getQuickshellFolder() / "functions/Colors.qml", FileType::QS);
+  }
 
-    if (colorsWriter.replaceValue("backgroundColor", colors.foregroundColor.toHex(), FileType::QS)) {
-      std::cout << "Success" << std::endl;
-    } else {
-      std::cout << "Failure" << std::endl;
+  bool writeColors() {
+    bool exitCode = true;
+
+    for (int i = 0; i < colors.palette.size(); ++i) {
+      if (!colorsWriter.replaceValue("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex(), nullptr)) {
+        std::cerr << "Error writing value " << colors.palette[i].toHex() << " to " << "paletteColor" << i + 1 << std::endl;
+        std::cout << "Make sure you aren't using the same theme as before" << std::endl;
+      }
     }
+    if (!colorsWriter.replaceValue("backgroundColor", colors.backgroundColor.toHex(), nullptr)) {
+      std::cerr << "Error writing value " << colors.backgroundColor.toHex() << " to " << "backgroundColor" << std::endl;
+      std::cout << "Make sure you aren't using the same theme as before" << std::endl;
+      exitCode = false;
+    }
+    if (!colorsWriter.replaceValue("foregroundColor", colors.foregroundColor.toHex(), nullptr)) {
+      std::cerr << "Error writing value " << colors.foregroundColor.toHex() << " to " << "foregroundColor" << std::endl;
+      std::cout << "Make sure you aren't using the same theme as before" << std::endl;
+      exitCode = false;
+    }
+    for (int i = 2; i < colors.main.size(); i++) {
+      auto it = find(colors.palette.begin(), colors.palette.end(), colors.main[i]) - colors.palette.begin();
+      if (!colorsWriter.replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it), nullptr)) {
+        /* std::cerr << "Error writing value " << "paletteColor" + std::to_string(it) << " to " << Utils().COLOR_NAMES[i] << std::endl;
+        std::cout << "Make sure you aren't using the same theme as before" << std::endl; */
+      }
+    }
+
+    if (!colorsWriter.writeToFile()) {
+      exitCode = false;
+      std::cerr << "Error writing to file: " << colorsWriter.getFile().filename() << std::endl;
+    }
+
+    if (!exitCode)
+      colorsWriter.revert();
+
+    return exitCode;
   }
 };
