@@ -1,4 +1,3 @@
-#include <asm-generic/ioctls.h>
 #include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
 #include <boost/algorithm/string/constants.hpp>
 #include <boost/algorithm/string/find.hpp>

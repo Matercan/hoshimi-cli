@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.31.6)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if (WIN32)
+  message("haha, you stinky loser - this doesn't work on windows")
+
 project(Hoshimi)
 
 set(HOSHIMI_VERSION "0.1.6")
