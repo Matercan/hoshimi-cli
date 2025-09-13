@@ -55,6 +55,7 @@ public:
 
   std::vector<Color> palette;
 
+  Colorscheme() {}
   Colorscheme(Color mainColors[8], std::vector<Color> paletteColors) {
     palette = paletteColors;
 
