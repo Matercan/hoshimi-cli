@@ -1,3 +1,4 @@
+#include <asm-generic/ioctls.h>
 #include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
 #include <boost/algorithm/string/constants.hpp>
 #include <boost/algorithm/string/find.hpp>
@@ -11,7 +12,16 @@
 #include <string>
 #include <vector>
 
+#include <string.h>
+#include <sys/ioctl.h>
+
 #include "version.h"
+
+struct winsize getTerminalSize() {
+  struct winsize w;
+  ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+  return w;
+}
 
 namespace fs = std::filesystem;
 std::vector<std::string> packages;
@@ -90,26 +100,41 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
                "file \n\n";
 }
 
-void print_progress_bar(float progress, size_t current, size_t total, int bar_width = 50) {
+void print_progress_bar(float progress, size_t current, size_t total) {
+  int terminal_width = getTerminalSize().ws_col;
+
   // Ensure progress is between 0 and 1
   progress = std::max(0.0f, std::min(1.0f, progress));
+
+  // Calculate the text that will appear after the progress bar
+  std::ostringstream text_stream;
+  text_stream << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f) << "% (" << current << "/" << total << ")";
+  std::string suffix_text = text_stream.str();
+
+  // Calculate space needed for: "[" + suffix_text
+  int non_bar_width = 1 + suffix_text.length(); // 1 for the opening "["
+
+  // Calculate available width for the actual bar
+  int bar_width = terminal_width - non_bar_width;
+
+  // Ensure minimum bar width
+  if (bar_width < 10)
+    bar_width = 10; // Minimum readable bar width
 
   int filled_width = static_cast<int>(progress * bar_width);
 
   std::cout << "\r["; // \r returns cursor to beginning of line
 
   // Print filled portion
-  for (int i = 0; i < filled_width; ++i) {
+  for (int i = 0; i < filled_width; ++i)
     std::cout << "█";
-  }
 
   // Print empty portion
-  for (int i = filled_width; i < bar_width; ++i) {
+  for (int i = filled_width; i < bar_width; ++i)
     std::cout << "░";
-  }
 
-  // Print percentage and count
-  std::cout << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f) << "% (" << current << "/" << total << ")";
+  // Print the suffix text we calculated earlier
+  std::cout << suffix_text;
 
   std::cout.flush(); // Ensure immediate output
 
@@ -136,6 +161,24 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME, std
     // Count total files for progress
     size_t total_files = 0;
     for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+
+      // Use standard string find instead of boost
+      std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
+      bool file_in_packages = false;
+
+      for (int i = 0; i < packages.size(); ++i) {
+
+        if (config_relative_path.find(packages[i]) != std::string::npos) {
+          file_in_packages = true;
+          break;
+        }
+      }
+
+      bool file_installed = (config[3].present && file_in_packages) || !config[3].present;
+
+      if (!file_installed)
+        continue;
+
       if (!fs::is_directory(dir_entry)) {
         total_files++;
       }
@@ -152,7 +195,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME, std
 
       // Clear progress bar before verbose output
       if (progress_bar_active && config[0].present) {
-        std::cout << "\r" << std::string(80, ' ') << "\r";
+        std::cout << "\r" << std::string(getTerminalSize().ws_col, ' ') << "\r";
         progress_bar_active = false;
       }
 
@@ -224,7 +267,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME, std
         // Create parent directory if it doesn't exist
         fs::create_directories(home_equivalent.parent_path());
 
-        if (!fs::is_symlink(home_equivalent))
+        if (!fs::is_symlink(dir_entry))
           fs::create_symlink(dir_entry, home_equivalent);
         else {
           fs::remove(home_equivalent);
@@ -249,7 +292,7 @@ int install_dotfiles(const std::string HOME, const std::string HOSHIMI_HOME, std
 
     // Clear progress bar at the end
     if (progress_bar_active) {
-      std::cout << "\r" << std::string(80, ' ') << "\r";
+      std::cout << "\r" << std::string(getTerminalSize().ws_col, ' ') << "\r";
     }
 
     return 0;
