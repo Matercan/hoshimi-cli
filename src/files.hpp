@@ -24,7 +24,6 @@ private:
   fs::path DOTFILES_DIRECTORY;
   fs::path BACKUP_DIRECTORY;
 
-  fs::path findHomeEquivilent(fs::path dotfile) { return HOME / findDotfilesRelativePath(dotfile); }
   fs::path findDotfilesRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY); }
   fs::path findConfigRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY.string() + ".config"); }
 
@@ -73,6 +72,7 @@ public:
 
   fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
   fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
+  fs::path findHomeEquivilent(fs::path dotfile) { return HOME / findDotfilesRelativePath(dotfile); }
 
   int install_dotfiles(std::vector<std::string> packages, bool verbose, bool onlyPackages) {
     // move the current dotfiles into a backup folder
@@ -354,7 +354,7 @@ private:
 public:
   QuickshellWriter() {
     colors = ColorsHandler().getColors();
-    colorsWriter = WriterBase(files.getQuickshellFolder() / "functions/Colors.qml", FileType::QS);
+    colorsWriter = WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "functions/Colors.qml"), FileType::QS);
   }
 
   bool writeColors() {
@@ -393,12 +393,11 @@ private:
 public:
   GhosttyWriter() {
     colors = ColorsHandler().getColors();
-    writer = WriterBase(files.getdotfilesDirectory() / ".config/ghostty/themes/hoshimi", FileType::VALUE_PAIR);
+    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/ghostty/themes/hoshimi"), FileType::VALUE_PAIR);
   }
 
   bool writeConfig() {
     bool exitCode = true;
-    std::cout << exitCode << std::endl;
 
     writer.replaceWithChecking("background", colors.backgroundColor.toHex());
     writer.replaceWithChecking("foreground", colors.foregroundColor.toHex());
@@ -408,12 +407,11 @@ public:
     writer.replaceWithChecking("selection-foreground", colors.activeColor.toHex());
 
     for (int i = 0; i < 16; ++i) {
-      std::cout << writer.replaceWithChecking("palette = " + std::to_string(i), colors.palette[i].toHex());
+      writer.replaceWithChecking("palette = " + std::to_string(i), colors.palette[i].toHex());
     }
 
     if (!writer.writeToFile()) {
       exitCode = false;
-      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
     }
 
     if (!exitCode)
