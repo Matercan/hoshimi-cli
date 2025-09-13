@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ostream>
 #include <regex.h>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -12,44 +13,7 @@
 
 namespace fs = std::filesystem;
 
-class WriterBase {
-public:
-  std::string newContents;
-
-  WriterBase(fs::path writingFile) {
-    file = writingFile;
-
-    std::ifstream f(file.string());
-
-    if (!f.is_open()) {
-      std::cerr << "Error opening the file: " << file.filename();
-    }
-
-    std::string s;
-    while (std::getline(f, s)) {
-      fileContents += s + "\n";
-    }
-
-    f.close();
-  }
-  WriterBase() {};
-
-private:
-  fs::path file;
-  std::string fileContents;
-};
-
-class QuickshellWriter {
-private:
-  Colorscheme colors;
-  WriterBase colorsWriter;
-
-public:
-  QuickshellWriter() {
-    colors = ColorsHandler().getColors();
-    colorsWriter = WriterBase(fs::path(""));
-  }
-};
+enum FileType { QS, GHOSTTY, ALACRITTY, KITTY, CAVA };
 
 class FilesManager {
 private:
@@ -93,7 +57,21 @@ public:
     BACKUP_DIRECTORY = fs::current_path() / "backup/";
   }
 
-  fs::path getQuickshellFolder() {}
+  bool isModifiable(fs::path dotfile) {
+    std::ifstream f(dotfile.string());
+
+    if (!f.is_open()) {
+      std::cerr << "Error opening file: " << dotfile.filename() << std::endl;
+      std::cout << "Full file path:" << dotfile.string() << std::endl;
+      return false;
+    }
+
+    std::string s;
+    std::getline(f, s);
+    return s.find("Hoshimi") == std::string::npos; // if Hoshimi is on the top line, it is modifiable
+  }
+
+  fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
 
   int install_dotfiles(std::vector<std::string> packages, bool verbose, bool onlyPackages) {
     // move the current dotfiles into a backup folder
@@ -246,6 +224,73 @@ public:
     } else {
       std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY << std::endl;
       return 1;
+    }
+  }
+};
+
+class WriterBase {
+public:
+  std::string newContents;
+  std::string fileContents;
+
+  WriterBase(fs::path writingFile) {
+    file = writingFile;
+
+    std::ifstream f(file.string());
+
+    if (!f.is_open()) {
+      std::cerr << "Error opening the file: " << file.filename() << std::endl;
+      std::cout << "Full file path: " << file.string() << std::endl;
+    }
+
+    std::string s;
+    while (std::getline(f, s)) {
+      fileContents += s + "\n";
+    }
+
+    f.close();
+    newContents = fileContents;
+  }
+  WriterBase() {};
+
+  bool replaceValue(std::string key, std::string value, FileType fileType) {
+    std::regex regex;
+    std::string regexReplacement;
+
+    if (fileType == FileType::QS) {
+      // Handles multiple formats and whitespace variations:
+      // 1. property string key: "value"
+      // 2. property string key:"value"
+      // 3. key: "value" (for simple assignments)
+      std::string pattern = "((?:property\\s+\\w+\\s+)?" + key + "\\s*:\\s*)\"[^\"]*\"";
+      regex = std::regex(pattern);
+      regexReplacement = "$1\"" + value + "\"";
+    }
+
+    std::string oldContents = newContents;
+    newContents = std::regex_replace(newContents, regex, regexReplacement);
+    return newContents != oldContents;
+  }
+
+private:
+  fs::path file;
+};
+
+class QuickshellWriter {
+private:
+  Colorscheme colors;
+  WriterBase colorsWriter;
+  FilesManager files;
+
+public:
+  QuickshellWriter() {
+    colors = ColorsHandler().getColors();
+    colorsWriter = WriterBase(files.getQuickshellFolder() / "functions/Colors.qml");
+
+    if (colorsWriter.replaceValue("backgroundColor", colors.foregroundColor.toHex(), FileType::QS)) {
+      std::cout << "Success" << std::endl;
+    } else {
+      std::cout << "Failure" << std::endl;
     }
   }
 };
