@@ -10,10 +10,10 @@ endif (WIN32)
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
 set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
-project(Hoshimi)
+project(hoshimi)
 
-set(HOSHIMI_VERSION "0.1.6")
-set(HOSHIMI_RELEASE_DATE "11th September")
+set(HOSHIMI_VERSION "0.1.7")
+set(HOSHIMI_RELEASE_DATE "13th September")
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
@@ -25,16 +25,16 @@ find_package(Boost REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(jsoncpp REQUIRED jsoncpp)
 
-add_executable(Hoshimi src/main.cpp)
+add_executable(hoshimi src/main.cpp)
 
-set_target_properties(Hoshimi PROPERTIES
+set_target_properties(hoshimi PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
 
-target_compile_options(Hoshimi INTERFACE
+target_compile_options(hoshimi INTERFACE
     "$<${gcc_like_cxx}:-Wall;-Werror;-Wunused;-Wformat=2>"
     "$<${msvc_cxx}:-Wall;-Werror;-Wunused;-Wformat=2>"
 )
-target_include_directories(Hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(Hoshimi PRIVATE Boost::boost ${jsoncpp_LIBRARIES})
-target_include_directories(Hoshimi PRIVATE ${jsoncpp_INCLUDE_DIRS})
+target_include_directories(hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(hoshimi PRIVATE Boost::boost ${jsoncpp_LIBRARIES})
+target_include_directories(hoshimi PRIVATE ${jsoncpp_INCLUDE_DIRS})

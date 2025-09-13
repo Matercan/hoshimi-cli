@@ -46,8 +46,8 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
   std::cout << "    arch-install  Install all the packages neccessary for this "
                "shell using paru\n";
   std::cout << "    version       Get version information of hoshimi\n";
-  std::cout << "    update        Update dotfiles to the most recent master "
-               "commit\n\n";
+  std::cout << "    update        Update dotfiles to the most recent master commit\n";
+  std::cout << "    source        Source the current configuration, updating the modifiable dotfiles \n\n";
 
   std::cout << "OPTIONS:\n";
 
@@ -171,6 +171,25 @@ int main(int argc, char *argv[]) {
       std::cout << "Hoshimi failed to update. Check if the directory " << HOSHIMI_HOME << "exists or not";
       return 2;
     }
+  } else if (command == "source") {
+    if (config[3].present) {
+      for (int i = 0; i < packages.size(); ++i) {
+        if (packages[i] == "ghostty") {
+          GhosttyWriter gs;
+          gs.writeConfig();
+        } else if (packages[i] == "quickshell") {
+          QuickshellWriter qs;
+          qs.writeColors();
+        }
+      }
+    } else {
+      GhosttyWriter *gs = new GhosttyWriter();
+      gs->writeConfig();
+
+      QuickshellWriter *qs = new QuickshellWriter();
+      qs->writeColors();
+    }
+
   } else if (command == "arch-install") {
     // Loop through all of the lnes in the lines of the file arch-packages
 
@@ -213,7 +232,6 @@ int main(int argc, char *argv[]) {
     f.close();
 
     // Install the packages the packages
-
     system(("paru -S " + packagesToInstall).c_str());
 
   } else if (command == "version") {

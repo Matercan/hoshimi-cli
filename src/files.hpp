@@ -71,6 +71,7 @@ public:
     return s.find("Hoshimi") != std::string::npos; // if Hoshimi is on the top line, it is modifiable
   }
 
+  fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
   fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
 
   int install_dotfiles(std::vector<std::string> packages, bool verbose, bool onlyPackages) {
@@ -193,7 +194,7 @@ public:
           fs::create_directories(home_equivalent.parent_path());
 
           if (isModifiable(dir_entry.path())) {
-            std::cout << "File " << dir_entry << " modifiable by Hoshimi, symlink will not be created" << std::endl;
+            std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
             fs::copy(dir_entry, home_equivalent);
           } else if (!fs::is_symlink(dir_entry))
             fs::create_symlink(dir_entry, home_equivalent);
@@ -328,6 +329,15 @@ public:
     return newContents != oldContents;
   }
 
+  bool replaceWithChecking(std::string key, std::string value) {
+    bool exit_code = replaceValue(key, value, nullptr);
+    if (!exit_code) {
+      std::cerr << "\033[1;31mError writing value " << value << " to " << key << std::endl;
+      std::cout << "Make sure you aren't sourcing the same theme as before\033[m" << std::endl;
+    }
+    return exit_code;
+  }
+
 private:
   fs::path file;
   std::string newContents;
@@ -351,27 +361,15 @@ public:
     bool exitCode = true;
 
     for (int i = 0; i < colors.palette.size(); ++i) {
-      if (!colorsWriter.replaceValue("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex(), nullptr)) {
-        std::cerr << "Error writing value " << colors.palette[i].toHex() << " to " << "paletteColor" << i + 1 << std::endl;
-        std::cout << "Make sure you aren't using the same theme as before" << std::endl;
-      }
+      colorsWriter.replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
     }
-    if (!colorsWriter.replaceValue("backgroundColor", colors.backgroundColor.toHex(), nullptr)) {
-      std::cerr << "Error writing value " << colors.backgroundColor.toHex() << " to " << "backgroundColor" << std::endl;
-      std::cout << "Make sure you aren't using the same theme as before" << std::endl;
-      exitCode = false;
-    }
-    if (!colorsWriter.replaceValue("foregroundColor", colors.foregroundColor.toHex(), nullptr)) {
-      std::cerr << "Error writing value " << colors.foregroundColor.toHex() << " to " << "foregroundColor" << std::endl;
-      std::cout << "Make sure you aren't using the same theme as before" << std::endl;
-      exitCode = false;
-    }
-    for (int i = 2; i < colors.main.size(); i++) {
+    colorsWriter.replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
+    colorsWriter.replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
+
+    for (int i = 2; i < colors.main.size(); ++i) {
       auto it = find(colors.palette.begin(), colors.palette.end(), colors.main[i]) - colors.palette.begin();
-      if (!colorsWriter.replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it), nullptr)) {
-        /* std::cerr << "Error writing value " << "paletteColor" + std::to_string(it) << " to " << Utils().COLOR_NAMES[i] << std::endl;
-        std::cout << "Make sure you aren't using the same theme as before" << std::endl; */
-      }
+      colorsWriter.replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it),
+                                nullptr); // Don't check this one because it will be similar each run
     }
 
     if (!colorsWriter.writeToFile()) {
@@ -381,6 +379,45 @@ public:
 
     if (!exitCode)
       colorsWriter.revert();
+
+    return exitCode;
+  }
+};
+
+class GhosttyWriter {
+private:
+  Colorscheme colors;
+  WriterBase writer;
+  FilesManager files;
+
+public:
+  GhosttyWriter() {
+    colors = ColorsHandler().getColors();
+    writer = WriterBase(files.getdotfilesDirectory() / ".config/ghostty/themes/hoshimi", FileType::VALUE_PAIR);
+  }
+
+  bool writeConfig() {
+    bool exitCode = true;
+    std::cout << exitCode << std::endl;
+
+    writer.replaceWithChecking("background", colors.backgroundColor.toHex());
+    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex());
+    writer.replaceWithChecking("cursor-color", colors.selectedColor.toHex());
+    writer.replaceWithChecking("cursor-text", colors.selectedColor.toHex());
+    writer.replaceWithChecking("selection-background", colors.activeColor.toHex());
+    writer.replaceWithChecking("selection-foreground", colors.activeColor.toHex());
+
+    for (int i = 0; i < 16; ++i) {
+      std::cout << writer.replaceWithChecking("palette = " + std::to_string(i), colors.palette[i].toHex());
+    }
+
+    if (!writer.writeToFile()) {
+      exitCode = false;
+      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
+    }
+
+    if (!exitCode)
+      writer.revert();
 
     return exitCode;
   }
