@@ -362,6 +362,8 @@ public:
 
     for (int i = 0; i < colors.palette.size(); ++i) {
       colorsWriter.replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
+      std::cout << "paletteColor" + std::to_string(i + 1) << std::endl;
+      std::cout << colors.palette[i].toHex() << std::endl;
     }
     colorsWriter.replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
     colorsWriter.replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
@@ -377,8 +379,8 @@ public:
       std::cerr << "Error writing to file: " << colorsWriter.getFile().filename() << std::endl;
     }
 
-    if (!exitCode)
-      colorsWriter.revert();
+    // if (!exitCode)
+    //  colorsWriter.revert();
 
     return exitCode;
   }
@@ -407,15 +409,17 @@ public:
     writer.replaceWithChecking("selection-foreground", colors.activeColor.toHex());
 
     for (int i = 0; i < 16; ++i) {
-      writer.replaceWithChecking("palette = " + std::to_string(i), colors.palette[i].toHex());
+      writer.replaceValue("palette = " + std::to_string(i), colors.palette[i].toHex(), nullptr);
     }
 
     if (!writer.writeToFile()) {
       exitCode = false;
+
+      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
     }
 
-    if (!exitCode)
-      writer.revert();
+    // if (!exitCode)
+    // writer.revert();
 
     return exitCode;
   }
