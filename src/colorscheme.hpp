@@ -19,7 +19,7 @@ public:
     while (hex.length() < 6)
       hex += '0';
 
-    for (int i = 0; i < hex.length(); i += 2) {
+    for (std::string::size_type i = 0; i < hex.length(); i += 2) {
       std::string hedec = {hex[i], hex[i + 1]};
       int val = std::stoi(hedec, nullptr, 16);
       switch (i) {
@@ -27,11 +27,12 @@ public:
         r = val;
       case 2:
         g = val;
-      case 3:
+      case 4:
         b = val;
       }
     }
   }
+
 
   // Convert to hex string
   std::string toHex() const {

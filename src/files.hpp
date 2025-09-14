@@ -93,8 +93,7 @@ public:
         std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
         bool file_in_packages = false;
 
-        for (int i = 0; i < packages.size(); ++i) {
-
+        for (size_t i = 0; i < packages.size(); ++i) {
           if (config_relative_path.find(packages[i]) != std::string::npos) {
             file_in_packages = true;
             break;
@@ -136,7 +135,7 @@ public:
 
         bool file_in_packages = false;
 
-        for (int i = 0; i < packages.size(); ++i) {
+        for (size_t i = 0; i < packages.size(); ++i) {
 
           // Use standard string find instead of boost
           if (config_relative_path.find(packages[i]) != std::string::npos) {
@@ -360,7 +359,7 @@ public:
   bool writeColors() {
     bool exitCode = true;
 
-    for (int i = 0; i < colors.palette.size(); ++i) {
+    for (size_t i = 0; i < colors.palette.size(); ++i) {
       colorsWriter.replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
       std::cout << "paletteColor" + std::to_string(i + 1) << std::endl;
       std::cout << colors.palette[i].toHex() << std::endl;
@@ -368,7 +367,7 @@ public:
     colorsWriter.replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
     colorsWriter.replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
 
-    for (int i = 2; i < colors.main.size(); ++i) {
+    for (size_t i = 2; i < colors.main.size(); ++i) {
       auto it = find(colors.palette.begin(), colors.palette.end(), colors.main[i]) - colors.palette.begin();
       colorsWriter.replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it),
                                 nullptr); // Don't check this one because it will be similar each run
