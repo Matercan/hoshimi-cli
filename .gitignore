@@ -6,6 +6,7 @@ build/
 
 # Code editors
 **.vscode/
+**.cache
 *.swp
 *.swo
 
@@ -13,4 +14,4 @@ build/
 *test*
 
 # generated files
-backup/
+**backup/

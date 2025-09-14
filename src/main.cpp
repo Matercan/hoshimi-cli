@@ -13,7 +13,6 @@
 #include <string.h>
 
 #include "files.hpp"
-#include "utils.hpp"
 #include "version.h"
 
 namespace fs = std::filesystem;
@@ -137,8 +136,8 @@ int main(int argc, char *argv[]) {
     if (filesManager.install_dotfiles(packages, config[0].present, config[3].present) != 0)
       return 1;
 
-    // TODO: rewrite the dotfiles in order to satisfy the config in
-    // ~/.config/hoshimi
+    // HACK: converting to a c string and then to a standard string.
+    system(((std::string)argv[0] + " source").c_str());
 
     std::cout << std::endl << "Hoshimi Dotfiles installed ";
     if (!config[1].present)
@@ -185,9 +184,12 @@ int main(int argc, char *argv[]) {
     } else {
       GhosttyWriter *gs = new GhosttyWriter();
       gs->writeConfig();
+      delete gs;
 
       QuickshellWriter *qs = new QuickshellWriter();
       qs->writeColors();
+      qs->writeShell();
+      delete qs;
     }
 
   } else if (command == "arch-install") {

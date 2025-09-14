@@ -347,39 +347,64 @@ private:
 class QuickshellWriter {
 private:
   Colorscheme colors;
-  WriterBase colorsWriter;
+  ShellHandler::Config config;
+  WriterBase *colorsWriter;
+  WriterBase *shellWriter;
   FilesManager files;
 
 public:
   QuickshellWriter() {
     colors = ColorsHandler().getColors();
-    colorsWriter = WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "functions/Colors.qml"), FileType::QS);
+    config = ShellHandler().getConfig();
+    colorsWriter = new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "functions/Colors.qml"), FileType::QS);
+    shellWriter = new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "globals/Variables.qml"), FileType::QS);
   }
 
   bool writeColors() {
     bool exitCode = true;
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
-      colorsWriter.replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
+      colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
       std::cout << "paletteColor" + std::to_string(i + 1) << std::endl;
       std::cout << colors.palette[i].toHex() << std::endl;
     }
-    colorsWriter.replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
-    colorsWriter.replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
+    colorsWriter->replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
+    colorsWriter->replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
 
     for (size_t i = 2; i < colors.main.size(); ++i) {
       auto it = find(colors.palette.begin(), colors.palette.end(), colors.main[i]) - colors.palette.begin();
-      colorsWriter.replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it),
-                                nullptr); // Don't check this one because it will be similar each run
+      colorsWriter->replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it),
+                                 nullptr); // Don't check this one because it will be similar each run
     }
 
-    if (!colorsWriter.writeToFile()) {
+    if (!colorsWriter->writeToFile()) {
       exitCode = false;
-      std::cerr << "Error writing to file: " << colorsWriter.getFile().filename() << std::endl;
+      std::cerr << "Error writing to file: " << colorsWriter->getFile().filename() << std::endl;
     }
 
-    // if (!exitCode)
-    //  colorsWriter.revert();
+    if (exitCode)
+      delete colorsWriter;
+    else
+      colorsWriter->revert();
+
+    return exitCode;
+  }
+
+  bool writeShell() {
+    bool exitCode = true;
+
+    if (!shellWriter->replaceWithChecking("wallpaper", config.wallpaper)) {
+      exitCode = false;
+      std::cout << shellWriter->getFile().filename() << std::endl;
+    }
+
+    if (!shellWriter->writeToFile())
+      exitCode = false;
+
+    if (exitCode)
+      delete shellWriter;
+    else
+      shellWriter->revert();
 
     return exitCode;
   }

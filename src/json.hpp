@@ -3,11 +3,11 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <regex>
+#include <stdexcept>
 #include <string>
 #include <vector>
-
-#include <regex.h>
 
 #include <json/json.h>
 #include <json/reader.h>
@@ -63,6 +63,68 @@ private:
   }
 };
 
+class ShellHandler : public JsonHandlerBase {
+private:
+  Json::Value themeConfig;
+  Json::Value mainConfig;
+
+public:
+  struct Config {
+    fs::path wallpaper;
+  };
+
+  ShellHandler() {
+    themeConfig = THEME_CONFIG_JSON;
+    mainConfig = MAIN_CONFIG_JSON;
+  }
+
+  Config getConfig() {
+    Config config;
+    std::string wallpaper = themeConfig["wallpaper"].asString();
+    std::string wallpaperDirectory = MAIN_CONFIG_JSON["globals"]["wallpaperDirectory"].asString();
+
+    // Helper function to check if file exists
+    auto fileExists = [](const std::string &path) { return fs::exists(path) && fs::is_regular_file(path); };
+
+    // Try different wallpaper paths in order of preference
+    std::vector<std::string> possiblePaths = {
+        wallpaperDirectory + wallpaper,               // wallpaperDirectory + filename
+        "~/.local/share/hoshimi/assets/" + wallpaper, // default hoshimi assets
+        wallpaper                                     // absolute path or relative to current dir
+    };
+
+    // Expand ~ to home directory
+    const char *home = getenv("HOME");
+    if (home) {
+      for (auto &path : possiblePaths) {
+        if (path.find("~/", 0) == 0) {
+          path = std::string(home) + path.substr(1);
+        }
+      }
+    }
+
+    // Find the first existing file
+    bool found = false;
+    for (const auto &path : possiblePaths) {
+      if (fileExists(path)) {
+        config.wallpaper = path;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      std::cerr << "Warning: Wallpaper not found. Tried:" << std::endl;
+      for (const auto &path : possiblePaths) {
+        std::cerr << "  " << path << std::endl;
+      }
+      config.wallpaper = ""; // or set a default wallpaper
+    }
+
+    return config;
+  }
+};
+
 class ColorsHandler : public JsonHandlerBase {
 private:
   Json::Value colors;
@@ -71,7 +133,7 @@ public:
   ColorsHandler() {
 
     if (!THEME_CONFIG_JSON.isMember("colors")) {
-      throw std::runtime_error("No colors section found in theme config");
+      throw std::runtime_error("Nonexistant 'colors' object");
     }
 
     colors = THEME_CONFIG_JSON["colors"];
