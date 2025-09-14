@@ -2,6 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "wallpaper": {
+      "type": "string",
+      "description": "Wallpaper for qs to use"
+    },
+    "theme": {
+      "type": "string",
+      "description": "Using different colors than the colors in this theme",
+      "default": "this"
+    },
     "bar": {
       "type": "object",
       "properties": {
@@ -280,32 +289,38 @@
         },
         "activeColor": {
           "type": "number",
-          "description": "the palette color which describes the color when it is active, defaults  to color 5",
+          "description": "the palette color which describes the color when it is active",
+          "default": 5,
           "maximum": 16
         },
         "selectedColor": {
           "type": "number",
-          "description": "the palette color which describes the color when the mouse is over it, defaults to color 6",
+          "description": "the palette color which describes the color when the mouse is over it",
+          "default": 6,
           "maximum": 16
         },
         "iconColor": {
           "type": "number",
-          "description": "the palette color which describes the color of icons, defaults to color 13",
+          "description": "the palette color which describes the color of icons",
+          "default": 13,
           "maximum": 16
         },
         "errorColor": {
           "type": "number",
-          "description": "the palette color which describes when there is an error, defaults to color 2",
+          "description": "the palette color which describes when there is an error",
+          "default": 2,
           "maximum": 16
         },
         "passwordColor": {
           "type": "number",
-          "description": "the palette color of the password, defaults to color 4",
+          "description": "the palette color of the password",
+          "default": 4,
           "maximum": 16
         },
         "borderColor": {
           "type": "number",
-          "description": "the palette color of borders, defaults to color 5",
+          "description": "the palette color of borders",
+          "default": 5,
           "maximum": 16
         },
         "paletteColor1": {
@@ -394,5 +409,10 @@
         "paletteColor16"
       ]
     }
-  }
+  },
+  "required": [
+    "bar",
+    "colors",
+    "wallpaper"
+  ]
 }
