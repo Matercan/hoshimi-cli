@@ -365,8 +365,6 @@ public:
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
       colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
-      std::cout << "paletteColor" + std::to_string(i + 1) << std::endl;
-      std::cout << colors.palette[i].toHex() << std::endl;
     }
     colorsWriter->replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
     colorsWriter->replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
