@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
       break;
     int packagesArgument = 1;
 
-    for (int j = 0; j < config.size(); j++) {
+    for (size_t j = 0; j < config.size(); j++) {
       if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {
         config[j].present = !config[j].present;
         if (j == 3)
@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
     }
   } else if (command == "source") {
     if (config[3].present) {
-      for (int i = 0; i < packages.size(); ++i) {
+      for (size_t i = 0; i < packages.size(); ++i) {
         if (packages[i] == "ghostty") {
           GhosttyWriter gs;
           gs.writeConfig();
@@ -192,6 +192,39 @@ int main(int argc, char *argv[]) {
       delete qs;
     }
 
+  } else if (command == "config") {
+    std::vector<std::string> vec;
+    std::string configArg;
+
+    // Process arguments until we find "set"
+    for (int i = 2; i < argc; ++i) {
+        if (strcmp(argv[i], "set") != 0) {  // Changed condition
+            vec.push_back(argv[i]);
+        } else if (i + 1 < argc) {  // Make sure there's a value after "set"
+            configArg = argv[i + 1];
+            break;
+        } else {
+            std::cerr << "Error: No value provided after 'set'" << std::endl;
+            return 1;
+        }
+    }
+
+    if (vec.empty() || configArg.empty()) {
+        std::cerr << "Error: Invalid config command format" << std::endl;
+        std::cout << "Usage: " << argv[0] << " config <key1> <key2> ... set <value>" << std::endl;
+        return 1;
+    }
+
+    JsonWriter js;
+    if (!js.writeJson(vec, configArg.c_str())) {
+        std::cerr << "Unable to handle request" << std::endl;
+        std::cout << "Write config options in a list and then set with the value you want to set it to" << std::endl;
+        std::cout << "For example: " << argv[0] 
+                  << " config globals wallpaperDirectory set ~/Pictures/Wallpapers" << std::endl;
+        return 1;
+    }
+
+    system((std::string(argv[0]) + " source").c_str());
   } else if (command == "arch-install") {
     // Loop through all of the lnes in the lines of the file arch-packages
 

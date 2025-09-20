@@ -28,8 +28,9 @@ public:
     else
       CONFIG_DIRECTORY_PATH = fs::path((std::string)home + "/.config/hoshimi/");
     THEMES_PATH = CONFIG_DIRECTORY_PATH / "themes/";
+    MAIN_CONFIG_PATH = CONFIG_DIRECTORY_PATH / "config.json";
 
-    MAIN_CONFIG_JSON = readJsonFile(CONFIG_DIRECTORY_PATH.string() + "config.json");
+    MAIN_CONFIG_JSON = readJsonFile(MAIN_CONFIG_PATH.string());
     THEME_CONFIG_FILE = THEMES_PATH.string() + MAIN_CONFIG_JSON["config"].asString() + ".json"; // Fixed: use [] instead of find()
     THEME_CONFIG_JSON = readJsonFile(THEME_CONFIG_FILE.string());
   }
@@ -39,6 +40,7 @@ public:
 protected:
   fs::path CONFIG_DIRECTORY_PATH;
   fs::path THEMES_PATH;
+  fs::path MAIN_CONFIG_PATH;
   Json::Value MAIN_CONFIG_JSON;
   fs::path THEME_CONFIG_FILE;
   Json::Value THEME_CONFIG_JSON;

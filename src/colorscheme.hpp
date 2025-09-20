@@ -25,10 +25,13 @@ public:
       switch (i) {
       case 0:
         r = val;
+        break;
       case 2:
         g = val;
+        break;
       case 4:
         b = val;
+        break;
       }
     }
   }

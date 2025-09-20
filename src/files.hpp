@@ -1,15 +1,6 @@
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <ostream>
-#include <regex.h>
-#include <regex>
-#include <string>
-#include <vector>
-
 #include "json.hpp"
 #include "utils.hpp"
+#include <cjson/cJSON.h>
 
 namespace fs = std::filesystem;
 
@@ -330,10 +321,8 @@ public:
 
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
-    if (!exit_code) {
-      std::cerr << "\033[1;31mError writing value " << value << " to " << key << std::endl;
-      std::cout << "Make sure you aren't sourcing the same theme as before\033[m" << std::endl;
-    }
+    if (!exit_code)
+      std::cerr << "\033[1;31mError writing value " << value << " to " << key << "\033[0m" << std::endl;
     return exit_code;
   }
 
@@ -360,6 +349,11 @@ public:
     shellWriter = new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "globals/Variables.qml"), FileType::QS);
   }
 
+  ~QuickshellWriter() {
+    delete colorsWriter;
+    delete shellWriter;
+  }
+
   bool writeColors() {
     bool exitCode = true;
 
@@ -380,9 +374,7 @@ public:
       std::cerr << "Error writing to file: " << colorsWriter->getFile().filename() << std::endl;
     }
 
-    if (exitCode)
-      delete colorsWriter;
-    else
+    if (!exitCode)
       colorsWriter->revert();
 
     return exitCode;
@@ -399,9 +391,7 @@ public:
     if (!shellWriter->writeToFile())
       exitCode = false;
 
-    if (exitCode)
-      delete shellWriter;
-    else
+    if (!exitCode)
       shellWriter->revert();
 
     return exitCode;
@@ -440,9 +430,276 @@ public:
       std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
     }
 
-    // if (!exitCode)
-    // writer.revert();
+    if (!exitCode)
+      writer.revert();
 
     return exitCode;
+  }
+};
+
+class JsonWriter : public JsonHandlerBase {
+private:
+  FilesManager files;
+
+  /**
+   * Set a nested value in JSON using an array of keys
+   * @param root - The root cJSON object
+   * @param keys - Array of key strings defining the path
+   * @param key_count - Number of keys in the array
+   * @param value - The string value to set
+   * @return 1 on success, 0 on failure
+   */
+  int set_nested_value(cJSON *root, const char **keys, int key_count, const char *value) {
+    if (!root || !keys || key_count <= 0) {
+      return 0;
+    }
+
+    cJSON *current = root;
+
+    // Navigate/create nested objects for all keys except the last one
+    for (int i = 0; i < key_count - 1; i++) {
+      cJSON *child = cJSON_GetObjectItem(current, keys[i]);
+
+      if (!child) {
+        // Create new object if it doesn't exist
+        child = cJSON_CreateObject();
+        if (!child) {
+          return 0;
+        }
+        cJSON_AddItemToObject(current, keys[i], child);
+      } else if (!cJSON_IsObject(child)) {
+        // If existing item is not an object, we can't nest further
+        printf("Error: Key '%s' exists but is not an object\n", keys[i]);
+        return 0;
+      }
+
+      current = child;
+    }
+
+    // Set the final value
+    const char *final_key = keys[key_count - 1];
+
+    // Remove existing item if it exists
+    cJSON_DeleteItemFromObject(current, final_key);
+
+    // Add the new value
+    cJSON *new_value = cJSON_CreateString(value);
+    if (!new_value) {
+      return 0;
+    }
+
+    cJSON_AddItemToObject(current, final_key, new_value);
+    return 1;
+  }
+
+  /**
+   * Get a nested value from JSON using an array of keys
+   * @param root - The root cJSON object
+   * @param keys - Array of key strings defining the path
+   * @param key_count - Number of keys in the array
+   * @return String value if found, NULL if not found
+   */
+  const char *get_nested_value(cJSON *root, const char **keys, int key_count) {
+    if (!root || !keys || key_count <= 0) {
+      return NULL;
+    }
+
+    cJSON *current = root;
+
+    // Navigate through all keys
+    for (int i = 0; i < key_count; i++) {
+      current = cJSON_GetObjectItem(current, keys[i]);
+      if (!current) {
+        return NULL;
+      }
+    }
+
+    // Return string value if it's a string
+    if (cJSON_IsString(current)) {
+      return cJSON_GetStringValue(current);
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Set nested value with different data types
+   */
+  int set_nested_value_number(cJSON *root, const char **keys, int key_count, double value) {
+    if (!root || !keys || key_count <= 0) {
+      return 0;
+    }
+
+    cJSON *current = root;
+
+    // Navigate/create nested objects for all keys except the last one
+    for (int i = 0; i < key_count - 1; i++) {
+      cJSON *child = cJSON_GetObjectItem(current, keys[i]);
+
+      if (!child) {
+        child = cJSON_CreateObject();
+        if (!child)
+          return 0;
+        cJSON_AddItemToObject(current, keys[i], child);
+      }
+      current = child;
+    }
+
+    // Set the final value as number
+    const char *final_key = keys[key_count - 1];
+    cJSON_DeleteItemFromObject(current, final_key);
+
+    cJSON *new_value = cJSON_CreateNumber(value);
+    if (!new_value)
+      return 0;
+
+    cJSON_AddItemToObject(current, final_key, new_value);
+    return 1;
+  }
+
+  char *formatJson(cJSON *root) {
+    char *raw_json = cJSON_Print(root);
+    if (!raw_json)
+      return NULL;
+
+    size_t raw_len = strlen(raw_json);
+    char *formatted = (char *)malloc(raw_len * 2); // Extra space for formatting
+    if (!formatted) {
+      free(raw_json);
+      return NULL;
+    }
+
+    size_t out_pos = 0;
+    int indent_level = 0;
+    int in_string = 0;
+
+    for (size_t i = 0; i < raw_len; i++) {
+      char c = raw_json[i];
+
+      // Track if we're inside a string
+      if (c == '"' && (i == 0 || raw_json[i - 1] != '\\')) {
+        in_string = !in_string;
+      }
+
+      if (!in_string) {
+        if (c == '{' || c == '[') {
+          formatted[out_pos++] = c;
+          formatted[out_pos++] = '\n';
+          indent_level++;
+
+          // Add indentation for next line
+          for (int j = 0; j < indent_level * 2; j++) {
+            formatted[out_pos++] = ' ';
+          }
+          continue;
+        } else if (c == '}' || c == ']') {
+          // Remove trailing spaces/commas before closing brace
+          while (out_pos > 0 && (formatted[out_pos - 1] == ' ' || formatted[out_pos - 1] == '\n')) {
+            out_pos--;
+          }
+          formatted[out_pos++] = '\n';
+          indent_level--;
+
+          // Add indentation
+          for (int j = 0; j < indent_level * 2; j++) {
+            formatted[out_pos++] = ' ';
+          }
+          formatted[out_pos++] = c;
+          continue;
+        } else if (c == ',') {
+          formatted[out_pos++] = c;
+          formatted[out_pos++] = '\n';
+
+          // Add indentation for next line
+          for (int j = 0; j < indent_level * 2; j++) {
+            formatted[out_pos++] = ' ';
+          }
+          continue;
+        } else if (c == ':') {
+          formatted[out_pos++] = c;
+          formatted[out_pos++] = ' '; // Single space after colon
+          continue;
+        } else if (c == '\t' || c == '\n' || c == ' ') {
+          // Skip whitespace (we control it)
+          continue;
+        }
+      }
+
+      formatted[out_pos++] = c;
+    }
+
+    formatted[out_pos] = '\0';
+    free(raw_json);
+    return formatted;
+  }
+
+public:
+  JsonWriter() {}
+
+  bool writeJson(const std::vector<std::string> &keys, const char *value) {
+    const bool editTheme = keys[0] == "theme";
+    const char *fileToEdit = editTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
+    std::cout << "Writing to: " << fileToEdit << std::endl;
+
+    // Read file using streams for safer handling
+    std::ifstream input(fileToEdit, std::ios::binary);
+    if (!input) {
+      std::cerr << "Unable to open file for reading: " << fileToEdit << std::endl;
+      return false;
+    }
+
+    // Read entire file into string
+    std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
+
+    // Parse JSON from string
+    cJSON *json = cJSON_Parse(content.c_str());
+    if (json == NULL) {
+      const char *error_ptr = cJSON_GetErrorPtr();
+      if (error_ptr != NULL) {
+        std::cerr << "Error parsing JSON at: " << error_ptr << std::endl;
+      }
+      return false;
+    }
+
+    // Rest of the function remains the same
+    std::vector<const char *> cKeys;
+    for (const auto &key : keys) {
+      // If editing theme, skip the first key ("theme")
+      if (editTheme) {
+        if (&key == &keys[0])
+          continue;
+      }
+      cKeys.push_back(key.c_str());
+    }
+
+    if (!set_nested_value(json, cKeys.data(), cKeys.size(), value)) {
+      std::cerr << "Failed to set value in JSON" << std::endl;
+      cJSON_Delete(json);
+      return false;
+    }
+
+    char *json_string = formatJson(json);
+    if (!json_string) {
+      std::cerr << "Failed to format JSON" << std::endl;
+      cJSON_Delete(json);
+      return false;
+    }
+
+    // Write using streams
+    std::ofstream output(fileToEdit);
+    if (!output) {
+      std::cerr << "Unable to open file for writing: " << fileToEdit << std::endl;
+      cJSON_free(json_string);
+      cJSON_Delete(json);
+      return false;
+    }
+
+    output << json_string;
+    output.close();
+
+    cJSON_free(json_string);
+    cJSON_Delete(json);
+    return true;
   }
 };
