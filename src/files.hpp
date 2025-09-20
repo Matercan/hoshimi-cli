@@ -1,6 +1,10 @@
 #include "json.hpp"
 #include "utils.hpp"
 #include <cjson/cJSON.h>
+#include <fstream>
+#include <iterator>
+#include <ostream>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -636,6 +640,51 @@ private:
 public:
   JsonWriter() {}
 
+  const char *getJson(const std::vector<std::string> &keys) {
+    const bool getTheme = keys[0] == "theme";
+    const char *fileToCheck = getTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
+    std::cout << "Checking: " << fileToCheck << std::endl;
+
+    // Read from file
+    std::ifstream input(fileToCheck, std::ios::binary);
+    if (!input) {
+      std::cerr << "Unable to open  the file for reading: " << fileToCheck << std::endl;
+      return NULL;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
+
+    cJSON *json = cJSON_Parse(content.c_str());
+    if (json == NULL) {
+      const char *error_ptr = cJSON_GetErrorPtr();
+      if (error_ptr != NULL) {
+        std::cerr << "Error parsing JSON at: " << error_ptr << std::endl;
+      }
+      return NULL;
+    }
+
+    // Get the keys as a vector of C strings
+    std::vector<const char *> cKeys;
+    for (const auto &key : keys) {
+      if (getTheme) {
+        if (&key == &keys[0])
+          continue;
+      }
+      cKeys.push_back(key.c_str());
+    }
+
+    // Get the value
+    const char *value = get_nested_value(json, cKeys.data(), cKeys.size());
+    if (value == NULL) {
+      std::cerr << "Error getting the value of " << cKeys[cKeys.size() - 1] << " in object" << cKeys[cKeys.size() - 2] << std::endl;
+      cJSON_Delete(json);
+      return NULL;
+    }
+
+        return value;
+  }
+
   bool writeJson(const std::vector<std::string> &keys, const char *value) {
     const bool editTheme = keys[0] == "theme";
     const char *fileToEdit = editTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
@@ -662,7 +711,7 @@ public:
       return false;
     }
 
-    // Rest of the function remains the same
+    // Get the keys as a vector of C strings
     std::vector<const char *> cKeys;
     for (const auto &key : keys) {
       // If editing theme, skip the first key ("theme")
@@ -673,12 +722,14 @@ public:
       cKeys.push_back(key.c_str());
     }
 
+    // Replace the value within the json
     if (!set_nested_value(json, cKeys.data(), cKeys.size(), value)) {
       std::cerr << "Failed to set value in JSON" << std::endl;
       cJSON_Delete(json);
       return false;
     }
 
+    // Format json
     char *json_string = formatJson(json);
     if (!json_string) {
       std::cerr << "Failed to format JSON" << std::endl;
