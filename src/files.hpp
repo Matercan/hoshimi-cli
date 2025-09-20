@@ -677,12 +677,12 @@ public:
     // Get the value
     const char *value = get_nested_value(json, cKeys.data(), cKeys.size());
     if (value == NULL) {
-      std::cerr << "Error getting the value of " << cKeys[cKeys.size() - 1] << " in object" << cKeys[cKeys.size() - 2] << std::endl;
+      std::cerr << "Error getting the value of " << cKeys[cKeys.size() - 1] << " in object " << cKeys[cKeys.size() - 2] << std::endl;
       cJSON_Delete(json);
       return NULL;
     }
 
-        return value;
+    return value;
   }
 
   bool writeJson(const std::vector<std::string> &keys, const char *value) {
