@@ -21,15 +21,17 @@ jobs:
     - name: Create build directory
       run: mkdir build
     
-    - name: Configure and Build
-      run: cmake --build build --config Debug --target hoshimi --
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build
+      run: cmake --build build --config Debug --target hoshimi
     
     - name: Test (optional)
       run: |
         cd build
-        # Add your test commands here if you have any
-        build/bin/hoshimi install
-        rm -rf ~/.local/share/hoshimi/
+        # This will come soon
+        
     
     - name: Upload artifacts (optional)
       uses: actions/upload-artifact@v4
