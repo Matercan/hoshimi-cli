@@ -4,7 +4,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <mutex>
 #include <ostream>
+#include <thread>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -44,6 +46,9 @@ private:
 
   void install_file(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
                     const std::vector<std::string> &packages, const bool &onlyPackages) {
+    // Add mutex for thread safety
+    static std::mutex progress_mutex;
+
     // Clear progress bar before verbose output
     if (progress_bar_active && verbose) {
       std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
@@ -118,7 +123,7 @@ private:
       fs::create_directories(home_equivalent.parent_path());
 
       if (isModifiable(dir_entry.path())) {
-        std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
+        // std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
         fs::copy(dir_entry, home_equivalent);
       } else if (!fs::is_symlink(dir_entry))
         fs::create_symlink(dir_entry, home_equivalent);
@@ -129,13 +134,12 @@ private:
 
     // Update progress (only for files)
     if (!fs::is_directory(dir_entry)) {
+      std::lock_guard<std::mutex> lock(progress_mutex);
       processed++;
 
       if (verbose) {
-        // Verbose mode: show simple progress
         std::cout << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << std::endl;
-      } else {
-        // Non-verbose mode: show progress bar
+      } else if (processed <= total_files) { // Add bounds check
         float progress = (float)processed / total_files;
         utils.print_progress_bar(progress, processed, total_files);
         progress_bar_active = true;
@@ -143,6 +147,60 @@ private:
     }
 
     return;
+  }
+
+  void installDirectory(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
+                        const std::vector<std::string> &packages, const bool &onlyPackages) {
+    static std::mutex threads_mutex;
+    std::vector<std::thread> threads;
+    const size_t max_threads = std::thread::hardware_concurrency();
+
+    // Add error handling for directory access
+    std::error_code ec;
+    fs::directory_iterator dir_it(dir_entry, fs::directory_options::skip_permission_denied, ec);
+
+    if (ec) {
+      if (verbose) {
+        std::cerr << "Warning: Could not access directory " << dir_entry.path() << ": " << ec.message() << std::endl;
+      }
+      return;
+    }
+
+    for (auto const &entry : dir_it) {
+      try {
+        if (fs::is_directory(entry, ec)) {
+          if (!ec) {
+            installDirectory(entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
+          }
+        } else if (!ec) {
+          std::lock_guard<std::mutex> lock(threads_mutex);
+
+          // Wait if we have too many threads
+          if (threads.size() >= max_threads) {
+            for (auto &t : threads) {
+              if (t.joinable())
+                t.join();
+            }
+            threads.clear();
+          }
+
+          threads.emplace_back([this, entry, &processed, &total_files, &progress_bar_active, &verbose, &packages, &onlyPackages]() {
+            install_file(entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
+          });
+        }
+      } catch (const fs::filesystem_error &e) {
+        if (verbose) {
+          std::cerr << "Warning: Error processing " << entry.path() << ": " << e.what() << std::endl;
+        }
+        continue;
+      }
+    }
+
+    // Wait for remaining threads
+    for (auto &t : threads) {
+      if (t.joinable())
+        t.join();
+    }
   }
 
 public:
@@ -175,61 +233,55 @@ public:
   }
 
   int install_dotfiles(std::vector<std::string> packages, bool verbose, bool onlyPackages) {
-    // move the current dotfiles into a backup folder
-
-    if (fs::exists(DOTFILES_DIRECTORY)) {
-      // Ensure backup directory exists
-      if (!fs::exists(BACKUP_DIRECTORY)) {
-        fs::create_directories(BACKUP_DIRECTORY);
-      } else {
-        fs::remove_all(BACKUP_DIRECTORY);
-        fs::create_directories(BACKUP_DIRECTORY);
-      }
-
-      // Count total files for progress
-      size_t total_files = 0;
-      for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-
-        std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
-        bool file_in_packages = false;
-
-        for (size_t i = 0; i < packages.size(); ++i) {
-          if (config_relative_path.find(packages[i]) != std::string::npos) {
-            file_in_packages = true;
-            break;
-          }
-        }
-
-        bool file_installed = (onlyPackages && file_in_packages) || !onlyPackages;
-
-        if (!file_installed)
-          continue;
-
-        if (!fs::is_directory(dir_entry)) {
-          total_files++;
-        }
-      }
-
-      if (verbose) {
-        std::cout << "Found " << total_files << " files to process.\n" << std::endl;
-      }
-
-      size_t processed = 0;
-      bool progress_bar_active = false;
-
-      for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-        install_file(dir_entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
-      }
-      // Clear progress bar at the end
-      if (progress_bar_active) {
-        std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
-      }
-
-      return 0;
-    } else {
+    if (!fs::exists(DOTFILES_DIRECTORY)) {
       std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY << std::endl;
       return 1;
     }
+
+    // Ensure backup directory exists
+    if (!fs::exists(BACKUP_DIRECTORY)) {
+      fs::create_directories(BACKUP_DIRECTORY);
+    } else {
+      fs::remove_all(BACKUP_DIRECTORY);
+      fs::create_directories(BACKUP_DIRECTORY);
+    }
+
+    // Count total files first
+    size_t total_files = 0;
+    {
+      std::mutex count_mutex;
+      for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+        if (!fs::is_directory(dir_entry)) {
+          std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
+          bool file_in_packages = std::any_of(packages.begin(), packages.end(),
+                                              [&](const std::string &pkg) { return config_relative_path.find(pkg) != std::string::npos; });
+
+          if ((onlyPackages && file_in_packages) || !onlyPackages) {
+            std::lock_guard<std::mutex> lock(count_mutex);
+            total_files++;
+          }
+        }
+      }
+    }
+
+    if (verbose) {
+      std::cout << "Found " << total_files << " files to process.\n" << std::endl;
+    }
+
+    size_t processed = 0;
+    bool progress_bar_active = false;
+
+    for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+      installDirectory(dir_entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
+    }
+
+    // Clear progress bar at the end
+    if (progress_bar_active) {
+      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
+      std::cout.flush();
+    }
+
+    return 0;
   }
 };
 
