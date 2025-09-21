@@ -1,6 +1,7 @@
 #include "json.hpp"
 #include "utils.hpp"
 #include <cjson/cJSON.h>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <ostream>
@@ -11,6 +12,25 @@ namespace fs = std::filesystem;
 enum FileType { QS, VALUE_PAIR, DEFAULT_VALUE };
 
 class FilesManager {
+public:
+  fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
+  fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
+  fs::path findHomeEquivilent(fs::path dotfile) { return HOME / findDotfilesRelativePath(dotfile); }
+
+  bool isModifiable(fs::path dotfile) {
+    std::ifstream f(dotfile.string());
+
+    if (!f.is_open()) {
+      std::cerr << "Error opening file: " << dotfile.filename() << std::endl;
+      std::cout << "Full file path:" << dotfile.string() << std::endl;
+      return false;
+    }
+
+    std::string s;
+    std::getline(f, s);
+    return s.find("Hoshimi") != std::string::npos; // if Hoshimi is on the top line, it is modifiable
+  }
+
 private:
   Utils utils;
 
@@ -21,6 +41,109 @@ private:
 
   fs::path findDotfilesRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY); }
   fs::path findConfigRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY.string() + ".config"); }
+
+  void install_file(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
+                    const std::vector<std::string> &packages, const bool &onlyPackages) {
+    // Clear progress bar before verbose output
+    if (progress_bar_active && verbose) {
+      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
+      progress_bar_active = false;
+    }
+    if (verbose) {
+      std::cout << "Processing: " << dir_entry << std::endl;
+    }
+
+    fs::path const relative_path = findDotfilesRelativePath(dir_entry.path());
+    fs::path const home_equivalent = findHomeEquivilent(dir_entry.path());
+    std::string const config_relative_path = findConfigRelativePath(dir_entry.path());
+    fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
+
+    bool file_in_packages = false;
+
+    for (size_t i = 0; i < packages.size(); ++i) {
+
+      // Use standard string find instead of boost
+      if (config_relative_path.find(packages[i]) != std::string::npos) {
+        file_in_packages = true;
+        break;
+      }
+    }
+
+    bool file_installed = (onlyPackages && file_in_packages) || !onlyPackages;
+
+    if (!file_installed)
+      return;
+
+    // First, handle backup of existing files/directories
+    if (fs::exists(home_equivalent)) {
+      // Create parent directories in backup if needed
+      fs::create_directories(backup_path.parent_path());
+
+      if (fs::is_directory(home_equivalent)) {
+        if (verbose) {
+          std::cout << "Backing up directory: " << home_equivalent << " to " << backup_path << std::endl;
+        }
+        // For directories, only backup if backup doesn't exist
+        if (!fs::exists(backup_path)) {
+          fs::create_directory(backup_path);
+        }
+      } else {
+        if (verbose) {
+          std::cout << "Backing up file: " << home_equivalent << " to " << backup_path << std::endl;
+        }
+        fs::rename(home_equivalent, backup_path);
+      }
+    }
+
+    // Now create symlinks/directories
+    if (fs::is_directory(dir_entry)) {
+      if (!fs::exists(home_equivalent)) {
+        if (verbose) {
+          std::cout << "Creating directory: " << home_equivalent << std::endl;
+        }
+        fs::create_directories(home_equivalent);
+      }
+    } else {
+      // For files, create symlink (file should be backed up by now)
+      if (verbose) {
+        std::cout << "Creating symlink: " << dir_entry << " -> " << home_equivalent << std::endl;
+      }
+
+      // Extra safety check
+      if (fs::exists(home_equivalent)) {
+        fs::remove(home_equivalent);
+      }
+
+      // Create parent directory if it doesn't exist
+      fs::create_directories(home_equivalent.parent_path());
+
+      if (isModifiable(dir_entry.path())) {
+        std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
+        fs::copy(dir_entry, home_equivalent);
+      } else if (!fs::is_symlink(dir_entry))
+        fs::create_symlink(dir_entry, home_equivalent);
+      else {
+        fs::remove(home_equivalent);
+      }
+    }
+
+    // Update progress (only for files)
+    if (!fs::is_directory(dir_entry)) {
+      processed++;
+
+      if (verbose) {
+        // Verbose mode: show simple progress
+        std::cout << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << std::endl;
+      } else {
+        // Non-verbose mode: show progress bar
+        float progress = (float)processed / total_files;
+        utils.print_progress_bar(progress, processed, total_files);
+        progress_bar_active = true;
+      }
+    }
+
+    return;
+  }
 
 public:
   FilesManager() {
@@ -50,24 +173,6 @@ public:
     DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
     BACKUP_DIRECTORY = fs::current_path() / "backup/";
   }
-
-  bool isModifiable(fs::path dotfile) {
-    std::ifstream f(dotfile.string());
-
-    if (!f.is_open()) {
-      std::cerr << "Error opening file: " << dotfile.filename() << std::endl;
-      std::cout << "Full file path:" << dotfile.string() << std::endl;
-      return false;
-    }
-
-    std::string s;
-    std::getline(f, s);
-    return s.find("Hoshimi") != std::string::npos; // if Hoshimi is on the top line, it is modifiable
-  }
-
-  fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
-  fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
-  fs::path findHomeEquivilent(fs::path dotfile) { return HOME / findDotfilesRelativePath(dotfile); }
 
   int install_dotfiles(std::vector<std::string> packages, bool verbose, bool onlyPackages) {
     // move the current dotfiles into a backup folder
@@ -113,106 +218,8 @@ public:
       bool progress_bar_active = false;
 
       for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-
-        // Clear progress bar before verbose output
-        if (progress_bar_active && verbose) {
-          std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
-          progress_bar_active = false;
-        }
-        if (verbose) {
-          std::cout << "Processing: " << dir_entry << std::endl;
-        }
-
-        fs::path const relative_path = findDotfilesRelativePath(dir_entry.path());
-        fs::path const home_equivalent = findHomeEquivilent(dir_entry.path());
-        std::string const config_relative_path = findConfigRelativePath(dir_entry.path());
-        fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
-
-        bool file_in_packages = false;
-
-        for (size_t i = 0; i < packages.size(); ++i) {
-
-          // Use standard string find instead of boost
-          if (config_relative_path.find(packages[i]) != std::string::npos) {
-            file_in_packages = true;
-            break;
-          }
-        }
-
-        bool file_installed = (onlyPackages && file_in_packages) || !onlyPackages;
-
-        if (!file_installed)
-          continue;
-
-        // First, handle backup of existing files/directories
-        if (fs::exists(home_equivalent)) {
-          // Create parent directories in backup if needed
-          fs::create_directories(backup_path.parent_path());
-
-          if (fs::is_directory(home_equivalent)) {
-            if (verbose) {
-              std::cout << "Backing up directory: " << home_equivalent << " to " << backup_path << std::endl;
-            }
-            // For directories, only backup if backup doesn't exist
-            if (!fs::exists(backup_path)) {
-              fs::create_directory(backup_path);
-            }
-          } else {
-            if (verbose) {
-              std::cout << "Backing up file: " << home_equivalent << " to " << backup_path << std::endl;
-            }
-            fs::rename(home_equivalent, backup_path);
-          }
-        }
-
-        // Now create symlinks/directories
-        if (fs::is_directory(dir_entry)) {
-          if (!fs::exists(home_equivalent)) {
-            if (verbose) {
-              std::cout << "Creating directory: " << home_equivalent << std::endl;
-            }
-            fs::create_directories(home_equivalent);
-          }
-        } else {
-          // For files, create symlink (file should be backed up by now)
-          if (verbose) {
-            std::cout << "Creating symlink: " << dir_entry << " -> " << home_equivalent << std::endl;
-          }
-
-          // Extra safety check
-          if (fs::exists(home_equivalent)) {
-            fs::remove(home_equivalent);
-          }
-
-          // Create parent directory if it doesn't exist
-          fs::create_directories(home_equivalent.parent_path());
-
-          if (isModifiable(dir_entry.path())) {
-            std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
-            fs::copy(dir_entry, home_equivalent);
-          } else if (!fs::is_symlink(dir_entry))
-            fs::create_symlink(dir_entry, home_equivalent);
-          else {
-            fs::remove(home_equivalent);
-          }
-        }
-
-        // Update progress (only for files)
-        if (!fs::is_directory(dir_entry)) {
-          processed++;
-
-          if (verbose) {
-            // Verbose mode: show simple progress
-            std::cout << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << std::endl;
-          } else {
-            // Non-verbose mode: show progress bar
-            float progress = (float)processed / total_files;
-            utils.print_progress_bar(progress, processed, total_files);
-            progress_bar_active = true;
-          }
-        }
+        install_file(dir_entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
       }
-
       // Clear progress bar at the end
       if (progress_bar_active) {
         std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
