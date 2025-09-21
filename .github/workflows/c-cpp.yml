@@ -16,25 +16,23 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config
+        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config libcjson-dev
     
     - name: Create build directory
       run: mkdir build
     
-    - name: Configure CMake
-      run: cmake -B build -S .
-    
-    - name: Build
-      run: cmake --build build
+    - name: Configure and Build
+      run: cmake --build build --config Debug --target hoshimi --
     
     - name: Test (optional)
       run: |
         cd build
         # Add your test commands here if you have any
-        # ctest
+        build/bin/hoshimi install
+        rm -rf ~/.local/share/hoshimi/
     
     - name: Upload artifacts (optional)
       uses: actions/upload-artifact@v4
       with:
         name: hoshimi-executable
-        path: build/bin/Hoshimi
+        path: build/bin/hoshimi
