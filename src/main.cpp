@@ -46,6 +46,7 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
                "shell using paru\n";
   std::cout << "    version       Get version information of hoshimi\n";
   std::cout << "    update        Update dotfiles to the most recent master commit\n";
+  std::cout << "    config        Get or set the config options within your configuration\n";
   std::cout << "    source        Source the current configuration, updating the modifiable dotfiles \n\n";
 
   std::cout << "OPTIONS:\n";
@@ -67,29 +68,10 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
       std::cout << "    " << (flag.description.empty() ? "[No description]" : flag.description) << "\n";
     }
   }
-  std::cout << "\n";
-
-  std::cout << "EXAMPLES:\n";
-  std::cout << "    " << program_name << " install           # Install dotfiles silently\n";
-
-  // Generate examples based on available flags
-  for (const auto &flag : config) {
-    if (!flag.args.empty() && !flag.args[0].empty()) {
-      std::cout << "    " << program_name << " install " << flag.args[0] << "        # Install with "
-                << (flag.description.empty() ? "this option" : flag.description.substr(0, flag.description.find(' '))) << "\n";
-    }
-  }
-
-  std::cout << "    " << program_name << " help              # Show this help\n\n";
-
-  std::cout << "DESCRIPTION:\n";
-  std::cout << "    Hoshimi manages Hyprland dotfiles by:\n";
-  std::cout << "    1. Cloning the dotfiles repository to ~/.local/share/hoshimi\n";
-  std::cout << "    2. Backing up existing dotfiles to ./backup/\n";
-  std::cout << "    3. Creating symlinks from the repository to your home "
-               "directory\n";
-  std::cout << "    4. Enablng config via simiple cli tools / a single json "
-               "file \n\n";
+  std::cout << "\nEXAMPLES:\n";
+  std::cout << "    " + program_name + " install -p hypr,fastfetch\n";
+  std::cout << "    " + program_name + " source -p quickshell\n";
+  std::cout << "    " + program_name + " arch-install\n";
 }
 
 int main(int argc, char *argv[]) {
