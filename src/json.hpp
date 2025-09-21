@@ -90,9 +90,9 @@ public:
 
     // Try different wallpaper paths in order of preference
     std::vector<std::string> possiblePaths = {
-        wallpaperDirectory + wallpaper,               // wallpaperDirectory + filename
-        "~/.local/share/hoshimi/assets/" + wallpaper, // default hoshimi assets
-        wallpaper                                     // absolute path or relative to current dir
+        wallpaperDirectory + wallpaper,                          // wallpaperDirectory + filename
+        "~/.local/share/hoshimi/assets/wallpapers/" + wallpaper, // default hoshimi assets
+        wallpaper                                                // absolute path or relative to current dir
     };
 
     // Expand ~ to home directory
