@@ -123,7 +123,7 @@ private:
       fs::create_directories(home_equivalent.parent_path());
 
       if (isModifiable(dir_entry.path())) {
-        // std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
+        std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
         fs::copy(dir_entry, home_equivalent);
       } else if (!fs::is_symlink(dir_entry))
         fs::create_symlink(dir_entry, home_equivalent);
@@ -467,6 +467,30 @@ private:
   WriterBase writer;
   FilesManager files;
 
+  void reloadGhostty() {
+    system("# Trigger ghostty config reload\n"
+           "if pgrep -x ghostty &> /dev/null; then\n"
+           "ghostty_addresses=$(hyprctl clients -j | jq -r \'.[] | select(.class == \"com.mitchellh.ghostty\") | .address\')\n"
+
+           "if [[ -n \"$ghostty_addresses\" ]]; then\n"
+           "# Save current active window\n"
+           "current_window=$(hyprctl activewindow -j | jq -r '.address')\n"
+
+           "# Focus each ghostty window and send reload key combo\n"
+           "while IFS= read -r address; do\n"
+           "hyprctl dispatch focuswindow \"address:$address\"\n"
+           "sleep 0.1\n"
+           "hyprctl dispatch sendshortcut \"CTRL SHIFT, comma, address:$address\"\n"
+           "done <<< \"$ghostty_addresses\"\n"
+
+           "# Return focus to original window\n"
+           "if [[ -n \"$current_window\" ]]; then\n"
+           "hyprctl dispatch focuswindow \"address:$current_window\"\n"
+           "fi\n"
+           "fi\n"
+           "fi\n");
+  }
+
 public:
   GhosttyWriter() {
     colors = ColorsHandler().getColors();
@@ -495,6 +519,9 @@ public:
 
     if (!exitCode)
       writer.revert();
+    else {
+      reloadGhostty();
+    }
 
     return exitCode;
   }
