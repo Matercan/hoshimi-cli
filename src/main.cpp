@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
 #include <boost/algorithm/string/constants.hpp>
 #include <boost/algorithm/string/find.hpp>
@@ -17,6 +18,7 @@
 
 namespace fs = std::filesystem;
 std::vector<std::string> packages;
+std::vector<std::string> notPackages;
 
 struct Flag {
   bool present;
@@ -72,39 +74,42 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
   std::cout << "    " + program_name + " install -p hypr,fastfetch\n";
   std::cout << "    " + program_name + " source -p quickshell\n";
   std::cout << "    " + program_name + " arch-install\n";
+  std::cout << "    " + program_name + " -np hypr --no-secondary-commands\n";
 }
 
 int main(int argc, char *argv[]) {
   std::vector<Flag> config = {Flag(false, {"-v", "--verbose"}, "Enable verbose output (show detailed operations)"),
                               Flag(false, {"-f", "--force"}, "Force overwrite existing files without backup"),
                               Flag(false, {"-h", "--help"}, "Show this help message"),
-                              Flag(false, {"-p", "--packages"},
-                                   "Packages only install the packages "
-                                   "for "
-                                   "example \n\t hypr,fastfetch,starship.toml,../.zshrc"
-                                   "\n\t hypr,nvim,btop")};
+                              Flag(false, {"-p", "--packages"}, "Packages that you want to install"),
+                              Flag(false, {"-np", "--not-packages"}, "Not-Packages that you want to install"),
+                              Flag(false, {"--no-secondary-commands"}, "Don't show the secondnary commands")};
+
   // Check if we have enough arguments
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " <command>" << std::endl;
     return 1;
   }
 
-  for (int i = 2; i < argc; i++) {
+  for (int i = 2; i < argc; ++i) {
     if (argc == 2)
       break;
-    int packagesArgument = 1;
+    int packagesArgument, noPackagesArgument;
 
-    for (size_t j = 0; j < config.size(); j++) {
+    for (size_t j = 0; j < config.size(); ++j) {
       if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {
         config[j].present = !config[j].present;
         if (j == 3)
           packagesArgument = ++i;
+        else if (j == 4)
+          noPackagesArgument = ++i;
       }
     }
 
     if (i == packagesArgument) {
       boost::split(packages, argv[i], boost::is_any_of(","), boost::token_compress_on);
-      std::cout << packages[0];
+    } else if (i == noPackagesArgument) {
+      boost::split(notPackages, argv[i], boost::is_any_of(","), boost::token_compress_on);
     }
   }
 
@@ -115,11 +120,14 @@ int main(int argc, char *argv[]) {
   } else if (command == "install") {
     FilesManager filesManager;
 
-    if (filesManager.install_dotfiles(packages, config[0].present, config[3].present) != 0)
+    if (filesManager.install_dotfiles(packages, notPackages, config[0].present, config[3].present) != 0)
       return 1;
 
+    std::cout << config[5].present << std::endl;
+
     // HACK: converting to a c string and then to a standard string.
-    system(((std::string)argv[0] + " source").c_str());
+    if (!config[5].present)
+      system(((std::string)argv[0] + " source").c_str());
 
     std::cout << std::endl << "Hoshimi Dotfiles installed ";
     if (!config[1].present)
@@ -211,7 +219,8 @@ int main(int argc, char *argv[]) {
         std::cout << "For example: " << argv[0] << " config globals wallpaperDirectory set ~/Pictures/Wallpapers" << std::endl;
         return 1;
       } else {
-        return system((std::string(argv[0]) + " source").c_str());
+        if (!config[5].present)
+          return system((std::string(argv[0]) + " source").c_str());
       }
     } else
       std::cout << js.getJson(vec) << std::endl;

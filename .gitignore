@@ -12,6 +12,10 @@ build/
 
 # test filees
 *test*
+*perf
+perf*
+out.folded
+flamegraph*
 
 # generated files
 **backup/

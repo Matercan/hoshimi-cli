@@ -1,5 +1,6 @@
 #include "json.hpp"
 #include "utils.hpp"
+#include <algorithm>
 #include <cjson/cJSON.h>
 #include <filesystem>
 #include <fstream>
@@ -45,7 +46,7 @@ private:
   fs::path findConfigRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY.string() + ".config"); }
 
   void install_file(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
-                    const std::vector<std::string> &packages, const bool &onlyPackages) {
+                    const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
     // Add mutex for thread safety
     static std::mutex progress_mutex;
 
@@ -60,21 +61,33 @@ private:
 
     fs::path const relative_path = findDotfilesRelativePath(dir_entry.path());
     fs::path const home_equivalent = findHomeEquivilent(dir_entry.path());
-    std::string const config_relative_path = findConfigRelativePath(dir_entry.path());
     fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
-
-    bool file_in_packages = false;
-
-    for (size_t i = 0; i < packages.size(); ++i) {
-
-      // Use standard string find instead of boost
-      if (config_relative_path.find(packages[i]) != std::string::npos) {
-        file_in_packages = true;
-        break;
-      }
+    std::string const config_relative_path = findConfigRelativePath(dir_entry.path());
+    if (verbose) {
+      std::cout << "Checking path: " << config_relative_path << std::endl;
     }
 
-    bool file_installed = (onlyPackages && file_in_packages) || !onlyPackages;
+    // Check if file matches any package in the include list
+    bool file_in_packages = false;
+    if (!packages.empty()) {
+      file_in_packages = std::any_of(packages.begin(), packages.end(),
+                                     [&config_relative_path](const std::string &pkg) { return config_relative_path.find(pkg) != std::string::npos; });
+    }
+
+    // Check if file matches any package in the exclude list
+    bool file_excluded = false;
+    if (!notPackages.empty()) {
+      file_excluded = std::any_of(notPackages.begin(), notPackages.end(),
+                                  [&config_relative_path](const std::string &pkg) { return config_relative_path.find(pkg) != std::string::npos; });
+    }
+
+    // Determine if file should be installed
+    bool file_installed = !file_excluded && (!onlyPackages || (onlyPackages && file_in_packages));
+
+    if (verbose) {
+      std::cout << "File: " << dir_entry.path().filename() << " in_packages: " << file_in_packages << " excluded: " << file_excluded
+                << " will_install: " << file_installed << std::endl;
+    }
 
     if (!file_installed)
       return;
@@ -122,12 +135,29 @@ private:
       // Create parent directory if it doesn't exist
       fs::create_directories(home_equivalent.parent_path());
 
+      // Add static mutex for cout synchronization
+      static std::mutex cout_mutex;
+
       if (isModifiable(dir_entry.path())) {
-        std::cout << "\033[1;32mFile " << dir_entry << " modifiable by Hoshimi, symlink will not be created\033[0m" << std::endl;
+        {
+          std::lock_guard<std::mutex> cout_lock(cout_mutex);
+          // std::cout << "\033[1;32mFile " << dir_entry.path().filename() << " modifiable by Hoshimi, symlink will not be created\033[0m" <<
+          // std::endl;
+        }
         fs::copy(dir_entry, home_equivalent);
-      } else if (!fs::is_symlink(dir_entry))
+      } else if (!fs::is_symlink(dir_entry)) {
+        {
+          std::lock_guard<std::mutex> cout_lock(cout_mutex);
+          if (verbose)
+            std::cout << "Creating symlink for: " << dir_entry.path().filename() << std::endl;
+        }
         fs::create_symlink(dir_entry, home_equivalent);
-      else {
+      } else {
+        {
+          std::lock_guard<std::mutex> cout_lock(cout_mutex);
+          if (verbose)
+            std::cout << "Removing existing symlink: " << dir_entry.path().filename() << std::endl;
+        }
         fs::remove(home_equivalent);
       }
     }
@@ -150,7 +180,14 @@ private:
   }
 
   void installDirectory(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
-                        const std::vector<std::string> &packages, const bool &onlyPackages) {
+                        const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
+    if (processed == total_files) {
+      if (verbose) {
+        std::cout << "Processed all files" << std::endl;
+      }
+      return;
+    }
+
     static std::mutex threads_mutex;
     std::vector<std::thread> threads;
     const size_t max_threads = std::thread::hardware_concurrency();
@@ -170,7 +207,7 @@ private:
       try {
         if (fs::is_directory(entry, ec)) {
           if (!ec) {
-            installDirectory(entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
+            installDirectory(entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
           }
         } else if (!ec) {
           std::lock_guard<std::mutex> lock(threads_mutex);
@@ -184,8 +221,8 @@ private:
             threads.clear();
           }
 
-          threads.emplace_back([this, entry, &processed, &total_files, &progress_bar_active, &verbose, &packages, &onlyPackages]() {
-            install_file(entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
+          threads.emplace_back([this, entry, &processed, &total_files, &progress_bar_active, &verbose, &packages, &notPackages, &onlyPackages]() {
+            install_file(entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
           });
         }
       } catch (const fs::filesystem_error &e) {
@@ -229,10 +266,10 @@ public:
     }
 
     DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
-    BACKUP_DIRECTORY = fs::current_path() / "backup/";
+    BACKUP_DIRECTORY = HOSHIMI_HOME + "/backup";
   }
 
-  int install_dotfiles(std::vector<std::string> packages, bool verbose, bool onlyPackages) {
+  int install_dotfiles(std::vector<std::string> packages, std::vector<std::string> notPackages, bool verbose, bool onlyPackages) {
     if (!fs::exists(DOTFILES_DIRECTORY)) {
       std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY << std::endl;
       return 1;
@@ -248,20 +285,39 @@ public:
 
     // Count total files first
     size_t total_files = 0;
-    {
-      std::mutex count_mutex;
-      for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+    std::mutex count_mutex;
+
+    try {
+      for (const auto &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
         if (!fs::is_directory(dir_entry)) {
           std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
-          bool file_in_packages = std::any_of(packages.begin(), packages.end(),
-                                              [&](const std::string &pkg) { return config_relative_path.find(pkg) != std::string::npos; });
 
-          if ((onlyPackages && file_in_packages) || !onlyPackages) {
+          // Use same logic as install_file
+          bool file_in_packages = false;
+          if (!packages.empty()) {
+            file_in_packages = std::any_of(packages.begin(), packages.end(), [&config_relative_path](const std::string &pkg) {
+              return config_relative_path.find(pkg) != std::string::npos;
+            });
+          }
+
+          bool file_excluded = false;
+          if (!notPackages.empty()) {
+            file_excluded = std::any_of(notPackages.begin(), notPackages.end(), [&config_relative_path](const std::string &pkg) {
+              return config_relative_path.find(pkg) != std::string::npos;
+            });
+          }
+
+          bool will_install = !file_excluded && (!onlyPackages || (onlyPackages && file_in_packages));
+
+          if (will_install) {
             std::lock_guard<std::mutex> lock(count_mutex);
             total_files++;
           }
         }
       }
+    } catch (const fs::filesystem_error &e) {
+      std::cerr << "Error counting files: " << e.what() << std::endl;
+      return 1;
     }
 
     if (verbose) {
@@ -272,7 +328,7 @@ public:
     bool progress_bar_active = false;
 
     for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-      installDirectory(dir_entry, processed, total_files, progress_bar_active, verbose, packages, onlyPackages);
+      installDirectory(dir_entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
     }
 
     // Clear progress bar at the end
@@ -385,7 +441,8 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
-      std::cerr << "\033[1;31mError writing value " << value << " to " << key << "\033[0m" << std::endl;
+      // std::cerr << "\033[1;31mError writing value " << value << " to " << key << "\033[0m" << std::endl;
+      return exit_code;
     return exit_code;
   }
 
@@ -478,14 +535,14 @@ private:
 
            "# Focus each ghostty window and send reload key combo\n"
            "while IFS= read -r address; do\n"
-           "hyprctl dispatch focuswindow \"address:$address\"\n"
+           "hyprctl dispatch focuswindow \"address:$address\" > /dev/null &\n"
            "sleep 0.1\n"
-           "hyprctl dispatch sendshortcut \"CTRL SHIFT, comma, address:$address\"\n"
+           "hyprctl dispatch sendshortcut \"CTRL SHIFT, comma, address:$address\" > /dev/null &\n"
            "done <<< \"$ghostty_addresses\"\n"
 
            "# Return focus to original window\n"
            "if [[ -n \"$current_window\" ]]; then\n"
-           "hyprctl dispatch focuswindow \"address:$current_window\"\n"
+           "hyprctl dispatch focuswindow \"address:$current_window\" > /dev/null &\n"
            "fi\n"
            "fi\n"
            "fi\n");

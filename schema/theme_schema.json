@@ -276,6 +276,11 @@
         "DevButtons"
       ]
     },
+    "m3": {
+      "type": "boolean",
+      "default": "false",
+      "description": "whether or not the colors are m3 or xterm based"
+    },
     "colors": {
       "type": "object",
       "description": "set of colors for the configuration to use based on xterm colors (https://www.ditig.com/256-colors-cheat-sheet)",
