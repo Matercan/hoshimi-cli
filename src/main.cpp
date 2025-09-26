@@ -1,19 +1,6 @@
-#include <algorithm>
-#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
-#include <boost/algorithm/string/constants.hpp>
-#include <boost/algorithm/string/find.hpp>
-#include <boost/algorithm/string/split.hpp> // Include for boost::split
-
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <ostream>
-#include <string>
-#include <vector>
-
-#include <string.h>
 
 #include "files.hpp"
+#include "utils/headers.hpp"
 #include "version.h"
 
 namespace fs = std::filesystem;

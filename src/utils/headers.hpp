@@ -1,18 +1,13 @@
 #pragma once
 
+// Standard library
 #include <algorithm>
-#include <cjson/cJSON.h>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
-
-#include <json/json.h>
-#include <json/reader.h>
-#include <json/value.h>
-
 #include <mutex>
 #include <ostream>
 #include <regex>
@@ -23,3 +18,15 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+
+// Boost
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/constants.hpp>
+#include <boost/algorithm/string/find.hpp>
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
+
+// Json
+#include <cjson/cJSON.h>
+#include <json/json.h>
+#include <json/reader.h>
+#include <json/value.h>
