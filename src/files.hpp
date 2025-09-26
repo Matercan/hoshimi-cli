@@ -1,14 +1,6 @@
 #include "json.hpp"
-#include "utils.hpp"
-#include <algorithm>
-#include <cjson/cJSON.h>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <mutex>
-#include <ostream>
-#include <thread>
-#include <vector>
+#include "utils/headers.hpp"
+#include "utils/utils.hpp"
 
 namespace fs = std::filesystem;
 

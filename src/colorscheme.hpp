@@ -1,7 +1,4 @@
-#include <cstdint>
-#include <iomanip>
-#include <string>
-#include <vector>
+#include "utils/headers.hpp"
 
 class Color {
 public:
@@ -35,7 +32,6 @@ public:
       }
     }
   }
-
 
   // Convert to hex string
   std::string toHex() const {

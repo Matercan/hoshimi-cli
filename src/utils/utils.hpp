@@ -1,13 +1,6 @@
 #pragma once
 
-#include <sys/ioctl.h>
-#include <unistd.h>
-
-#include <iomanip>
-#include <iostream>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <vector>
+#include "headers.hpp"
 
 class Utils {
 public:

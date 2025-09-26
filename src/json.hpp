@@ -1,18 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <regex>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
-#include <json/json.h>
-#include <json/reader.h>
-#include <json/value.h>
-
 #include "colorscheme.hpp"
 
 namespace fs = std::filesystem;
