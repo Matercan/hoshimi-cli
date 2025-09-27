@@ -36,7 +36,8 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
   std::cout << "    version       Get version information of hoshimi\n";
   std::cout << "    update        Update dotfiles to the most recent master commit\n";
   std::cout << "    config        Get or set the config options within your configuration\n";
-  std::cout << "    source        Source the current configuration, updating the modifiable dotfiles \n\n";
+  std::cout << "    source        Source the current configuration, updating the modifiable dotfiles \n";
+  std::cout << "    restart       (re)start the shell and reload terminals. \n\n";
 
   std::cout << "OPTIONS:\n";
 
@@ -162,6 +163,12 @@ int main(int argc, char *argv[]) {
       GhosttyWriter *gs = new GhosttyWriter();
       gs->writeConfig();
       delete gs;
+      AlacrittyWriter *as = new AlacrittyWriter();
+      as->writeConfig();
+      delete as;
+      FootWriter *fs = new FootWriter();
+      fs->writeConfig();
+      delete fs;
 
       QuickshellWriter *qs = new QuickshellWriter();
       qs->writeColors();
@@ -256,6 +263,18 @@ int main(int argc, char *argv[]) {
 
     // Install the packages the packages
     system(("paru -S " + packagesToInstall).c_str());
+
+  } else if (command == "restart") {
+    if (!config[5].present)
+      system((std::string(argv[0]) + " source").c_str());
+
+    GhosttyWriter *gs = new GhosttyWriter();
+    gs->reloadGhostty();
+    delete gs;
+
+    system("killall qs; \n "
+           " qs > /dev/null 2>&1 &");
+    std::cout << "Hoshimi restarted" << std::endl;
 
   } else if (command == "version") {
     std::cout << "hoshimi v" << HOSHIMI_VERSION << std::endl;

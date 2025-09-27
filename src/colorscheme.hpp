@@ -5,6 +5,7 @@ public:
   int r;
   int g;
   int b;
+  enum FLAGS { NHASH, WQUOT, NOFLAGS };
 
   Color() : r(0), g(0), b(0) {}
   Color(uint8_t red, uint8_t green, uint8_t blue) : r(red), g(green), b(blue) {}
@@ -59,10 +60,16 @@ public:
   }
 
   // Convert to hex string
-  std::string toHex() const {
+  std::string toHex(FLAGS flag = FLAGS::NOFLAGS) const {
     std::stringstream ss;
-    ss << "#" << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(r) << std::setw(2) << static_cast<int>(g) << std::setw(2)
+    if (flag != FLAGS::NHASH)
+      ss << "#";
+    else if (flag == FLAGS::WQUOT)
+      ss << "\"";
+    ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(r) << std::setw(2) << static_cast<int>(g) << std::setw(2)
        << static_cast<int>(b);
+    if (flag == FLAGS::WQUOT)
+      ss << "\"";
     return ss.str();
   }
 

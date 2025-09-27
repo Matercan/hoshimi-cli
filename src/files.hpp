@@ -1,6 +1,7 @@
 #include "json.hpp"
 #include "utils/utils.hpp"
 
+
 namespace fs = std::filesystem;
 
 enum FileType { QS, VALUE_PAIR, DEFAULT_VALUE };
@@ -419,7 +420,8 @@ public:
       regexReplacement = "$1\"" + value + "\"";
     }
     if (*fileType == FileType::VALUE_PAIR) {
-      std::string pattern = "(^|\\n)(" + key + "\\s*=\\s*)([^\\n]*)";
+      // Accept both "key = value" and "key: value" styles (covers many config formats)
+      std::string pattern = "(^|\\n)(" + key + "\\s*(?:=|:)\\s*)([^\\n]*)";
       regex = std::regex(pattern);
       regexReplacement = "$1$2" + value;
     }
@@ -514,6 +516,7 @@ private:
   WriterBase writer;
   FilesManager files;
 
+public:
   void reloadGhostty() {
     system("# Trigger ghostty config reload\n"
            "if pgrep -x ghostty &> /dev/null; then\n"
@@ -538,7 +541,6 @@ private:
            "fi\n");
   }
 
-public:
   GhosttyWriter() {
     colors = ColorsHandler().getColors();
     writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/ghostty/themes/hoshimi"), FileType::VALUE_PAIR);
@@ -571,6 +573,165 @@ public:
     }
 
     return exitCode;
+  }
+};
+
+// Writer for foot terminal (uses key: value and palette entries)
+class FootWriter {
+private:
+  Colorscheme colors;
+  WriterBase writer;
+  FilesManager files;
+
+public:
+  FootWriter() {
+    colors = ColorsHandler().getColors();
+    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/foot/foot.ini"), FileType::VALUE_PAIR);
+  }
+
+  bool writeConfig() {
+    bool exitCode = true;
+
+    writer.replaceWithChecking("background", colors.backgroundColor.toHex());
+    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex());
+    writer.replaceWithChecking("cursor_color", colors.selectedColor.toHex());
+    writer.replaceWithChecking("selection_background", colors.activeColor.toHex());
+
+    for (int i = 0; i < 8; ++i) {
+      writer.replaceWithChecking("regular" + std::to_string(i), colors.palette[i].toHex());
+    }
+    for (int i = 8; i < 16; ++i) {
+      writer.replaceWithChecking("bright" + std::to_string(i-8), colors.palette[i].toHex());
+    }
+
+    if (!writer.writeToFile()) {
+      exitCode = false;
+      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
+    }
+
+    if (!exitCode)
+      writer.revert();
+
+    return exitCode;
+  }
+};
+
+// Writer for kitty terminal
+class KittyWriter {
+private:
+  Colorscheme colors;
+  WriterBase writer;
+  FilesManager files;
+
+public:
+  KittyWriter() {
+    colors = ColorsHandler().getColors();
+    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/kitty/hoshimi.conf"), FileType::VALUE_PAIR);
+  }
+
+  void reloadKitty() {
+    // Send SIGUSR1 to kitty to reload config if running
+    system("if pgrep -x kitty > /dev/null; then kill -USR1 $(pgrep -x kitty); fi");
+  }
+
+  bool writeConfig() {
+    bool exitCode = true;
+
+    writer.replaceWithChecking("background", colors.backgroundColor.toHex());
+    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex());
+    writer.replaceWithChecking("cursor", colors.selectedColor.toHex());
+    writer.replaceWithChecking("selection_background", colors.activeColor.toHex());
+
+    for (int i = 0; i < 16; ++i) {
+      // kitty palette entries are usually 'color0 #000000'
+      writer.replaceValue("color" + std::to_string(i), colors.palette[i].toHex(), nullptr);
+    }
+
+    if (!writer.writeToFile()) {
+      exitCode = false;
+      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
+    }
+
+    if (!exitCode)
+      writer.revert();
+    else
+      reloadKitty();
+
+    return exitCode;
+  }
+};
+
+// YAML-backed writer for Alacritty
+class AlacrittyWriter {
+private:
+  Colorscheme colors;
+  FilesManager files;
+
+  fs::path getAlacrittyPath() { return files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/alacritty/themes/hoshimi.toml"); }
+
+public:
+  AlacrittyWriter() { colors = ColorsHandler().getColors(); }
+
+  void reloadAlacritty() {
+    // Alacritty doesn't officially support reload; best-effort HUP
+    system("if pgrep -x alacritty > /dev/null; then pkill -HUP alacritty; fi");
+  }
+
+  bool writeConfig() {
+    fs::path path = getAlacrittyPath();
+
+    // Build the file contents using the user's bracket-style template
+    std::string out;
+    out += "[colors]\n";
+    out += "cursor = \"" + colors.selectedColor.toHex() + "\"\n";
+    out += "search = \"\"\n";
+    out += "hints = \"\"\n";
+    out += "selection = \"" + colors.activeColor.toHex() + "\"\n";
+    out += "footer_bar = \"\"\n";
+    out += "transparent_background_colors = true\n\n";
+
+    out += "[colors.primary]\n";
+    out += "background = \"" + colors.backgroundColor.toHex() + "\"\n";
+    out += "foreground = \"" + colors.foregroundColor.toHex() + "\"\n\n";
+
+    // Normal colors (standard order)
+    static const char *normal_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
+    out += "[colors.normal]\n";
+    for (int i = 0; i < 8; ++i) {
+      std::string hex = (i < (int)colors.palette.size()) ? colors.palette[i].toHex() : std::string("#000000");
+      out += std::string(normal_names[i]) + " = \"" + hex + "\"\n";
+    }
+    out += "\n";
+
+    // Bright colors (palette[8..15])
+    static const char *bright_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
+    out += "[colors.bright]\n";
+    for (int i = 0; i < 8; ++i) {
+      int idx = 8 + i;
+      std::string hex = (idx < (int)colors.palette.size()) ? colors.palette[idx].toHex() : colors.palette[i].toHex();
+      out += std::string(bright_names[i]) + " = \"" + hex + "\"\n";
+    }
+    out += "\n";
+
+    // Ensure parent directories exist
+    try {
+      fs::create_directories(path.parent_path());
+    } catch (const std::exception &e) {
+      std::cerr << "Failed to create directories for alacritty file: " << e.what() << std::endl;
+      return false;
+    }
+
+    // Write to file
+    std::ofstream fout(path.string());
+    if (!fout) {
+      std::cerr << "Unable to open alacritty file for writing: " << path << std::endl;
+      return false;
+    }
+    fout << out;
+    fout.close();
+
+    reloadAlacritty();
+    return true;
   }
 };
 
