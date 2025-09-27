@@ -27,6 +27,3 @@
 
 // Json
 #include <cjson/cJSON.h>
-#include <json/json.h>
-#include <json/reader.h>
-#include <json/value.h>

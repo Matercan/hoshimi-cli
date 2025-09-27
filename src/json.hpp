@@ -1,11 +1,34 @@
 #pragma once
 
 #include "colorscheme.hpp"
+#include "utils/headers.hpp"
 
 namespace fs = std::filesystem;
 
 class JsonHandlerBase {
 public:
+  cJSON *getJsonFromFile(const char *filePath) {
+    std::ifstream input(filePath, std::ios::binary);
+    if (!input) {
+      std::cerr << "Unable to open file for reading: " << filePath << std::endl;
+      return nullptr;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
+
+    cJSON *json = cJSON_Parse(content.c_str());
+    if (json == NULL) {
+      const char *error_ptr = cJSON_GetErrorPtr();
+      if (error_ptr != NULL) {
+        std::cerr << "Error parsing JSON at: " << &error_ptr << std::endl;
+      }
+      return nullptr;
+    }
+
+    return json;
+  }
+
   JsonHandlerBase() {
     // Get data path
     const char *xdg_config_home = getenv("XDG_CONFIG_HOME");
@@ -17,9 +40,28 @@ public:
     THEMES_PATH = CONFIG_DIRECTORY_PATH / "themes/";
     MAIN_CONFIG_PATH = CONFIG_DIRECTORY_PATH / "config.json";
 
-    MAIN_CONFIG_JSON = readJsonFile(MAIN_CONFIG_PATH.string());
-    THEME_CONFIG_FILE = THEMES_PATH.string() + MAIN_CONFIG_JSON["config"].asString() + ".json"; // Fixed: use [] instead of find()
-    THEME_CONFIG_JSON = readJsonFile(THEME_CONFIG_FILE.string());
+    MAIN_CONFIG_JSON = getJsonFromFile(MAIN_CONFIG_PATH.c_str());
+
+    // Helper to safely get a string property from a cJSON object
+    auto getStringOrEmpty = [&](cJSON *parent, const char *key) -> std::string {
+      if (!parent)
+        return std::string();
+      cJSON *it = cJSON_GetObjectItemCaseSensitive(parent, key);
+      if (!it)
+        return std::string();
+      if (cJSON_IsString(it) && it->valuestring)
+        return std::string(it->valuestring);
+      return std::string();
+    };
+
+    std::string themeName = getStringOrEmpty(MAIN_CONFIG_JSON, "config");
+    if (themeName.empty()) {
+      std::cerr << "Warning: 'config' key missing or not a string in main config: " << MAIN_CONFIG_PATH << std::endl;
+      themeName = "default"; // fallback theme name
+    }
+
+    THEME_CONFIG_FILE = THEMES_PATH / (themeName + ".json");
+    THEME_CONFIG_JSON = getJsonFromFile(THEME_CONFIG_FILE.c_str());
   }
 
   std::string getThemePath() { return THEME_CONFIG_FILE.string(); }
@@ -28,34 +70,15 @@ protected:
   fs::path CONFIG_DIRECTORY_PATH;
   fs::path THEMES_PATH;
   fs::path MAIN_CONFIG_PATH;
-  Json::Value MAIN_CONFIG_JSON;
+  cJSON *MAIN_CONFIG_JSON;
   fs::path THEME_CONFIG_FILE;
-  Json::Value THEME_CONFIG_JSON;
-
-private:
-  Json::Value readJsonFile(const std::string &filePath) {
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-      throw std::runtime_error("Could not open file: " + filePath);
-    }
-
-    Json::Value root;
-    Json::CharReaderBuilder builder;
-    std::string errors;
-
-    if (!Json::parseFromStream(builder, file, &root, &errors)) {
-      throw std::runtime_error("Failed to parse JSON: " + errors);
-    }
-
-    file.close();
-    return root;
-  }
+  cJSON *THEME_CONFIG_JSON;
 };
 
 class ShellHandler : public JsonHandlerBase {
 private:
-  Json::Value themeConfig;
-  Json::Value mainConfig;
+  cJSON *themeConfig;
+  cJSON *mainConfig;
 
 public:
   struct Config {
@@ -69,8 +92,23 @@ public:
 
   Config getConfig() {
     Config config;
-    std::string wallpaper = themeConfig["wallpaper"].asString();
-    std::string wallpaperDirectory = MAIN_CONFIG_JSON["globals"]["wallpaperDirectory"].asString();
+    // Safe accessors
+    auto getObj = [&](cJSON *parent, const char *key) -> cJSON * {
+      if (!parent)
+        return nullptr;
+      return cJSON_GetObjectItemCaseSensitive(parent, key);
+    };
+
+    auto getString = [&](cJSON *parent, const char *key) -> std::string {
+      cJSON *it = getObj(parent, key);
+      if (!it || !cJSON_IsString(it) || !it->valuestring)
+        return std::string();
+      return std::string(it->valuestring);
+    };
+
+    std::string wallpaper = getString(themeConfig, "wallpaper");
+    cJSON *globals = getObj(mainConfig, "globals");
+    std::string wallpaperDirectory = getString(globals, "wallpaperDirectory");
 
     // Helper function to check if file exists
     auto fileExists = [](const std::string &path) { return fs::exists(path) && fs::is_regular_file(path); };
@@ -116,62 +154,89 @@ public:
 
 class ColorsHandler : public JsonHandlerBase {
 private:
-  Json::Value colors;
+  cJSON *colors;
 
 public:
   ColorsHandler() {
-
-    if (!THEME_CONFIG_JSON.isMember("colors")) {
+    colors = cJSON_GetObjectItemCaseSensitive(THEME_CONFIG_JSON, "colors");
+    if (!colors) {
       throw std::runtime_error("Nonexistant 'colors' object");
     }
-
-    colors = THEME_CONFIG_JSON["colors"];
   }
 
   Colorscheme getColors() {
 
     // Use safer access methods
-    Color backgroundColor = colors["backgroundColor"].asString();
-    Color foregroundColor = colors["foregroundColor"].asString();
+    auto getObj = [&](cJSON *parent, const char *key) -> cJSON * {
+      if (!parent)
+        return nullptr;
+      return cJSON_GetObjectItemCaseSensitive(parent, key);
+    };
 
-    // Safer default value handling
-    uint8_t activeColor = colors.get("activeColor", 5).asInt() - 1; // Convert to 0-based index
-    uint8_t selectedColor = colors.get("selectedColor", 6).asInt() - 1;
-    uint8_t iconColor = colors.get("iconColor", 13).asInt() - 1;
-    uint8_t errorColor = colors.get("errorColor", 2).asInt() - 1;
-    uint8_t passwordColor = colors.get("passwordColor", 4).asInt() - 1;
-    uint8_t borderColor = colors.get("borderColor", 5).asInt() - 1;
+    auto getString = [&](cJSON *parent, const char *key) -> std::string {
+      cJSON *it = getObj(parent, key);
+      if (!it || !cJSON_IsString(it) || !it->valuestring)
+        return std::string();
+      return std::string(it->valuestring);
+    };
 
-    std::vector<Color> paletteColors(16);
+    auto getInt = [&](cJSON *parent, const char *key, int def = 0) -> int {
+      cJSON *it = getObj(parent, key);
+      if (!it)
+        return def;
+      if (cJSON_IsNumber(it))
+        return it->valueint;
+      if (cJSON_IsString(it) && it->valuestring)
+        return atoi(it->valuestring);
+      return def;
+    };
+
+    std::string bgStr = getString(colors, "backgroundColor");
+    std::string fgStr = getString(colors, "foregroundColor");
+    Color backgroundColor = bgStr.empty() ? Color("#000000") : Color(bgStr);
+    Color foregroundColor = fgStr.empty() ? Color("#ffffff") : Color(fgStr);
+
+    // Safer default value handling (note: JSON stores 1-based indexes in theme files)
+    int activeColorIdx = getInt(colors, "activeColor", 1) - 1;
+    int selectedColorIdx = getInt(colors, "selectedColor", 2) - 1;
+    int iconColorIdx = getInt(colors, "iconColor", 3) - 1;
+    int errorColorIdx = getInt(colors, "errorColor", 4) - 1;
+    int passwordColorIdx = getInt(colors, "passwordColor", 5) - 1;
+    int borderColorIdx = getInt(colors, "borderColor", 6) - 1;
+
+    std::vector<Color> paletteColors(16, Color("#000000"));
 
     std::regex paletteColorRegex("^paletteColor(1[0-6]|[1-9])$");
 
-    for (Json::Value::const_iterator it = colors.begin(); it != colors.end(); ++it) {
-      std::string key = it.key().asString();
-      std::smatch match;
-
-      if (std::regex_match(key, match, paletteColorRegex)) {
-        int paletteIndex = std::stoi(match[1].str()) - 1; // Convert to 0-based index
-        if (paletteIndex >= 0 && paletteIndex < 16) {
-          paletteColors[paletteIndex] = Color(it->asString());
+    cJSON *child = colors->child;
+    while (child) {
+      if (child->string && cJSON_IsString(child) && child->valuestring) {
+        std::string key = child->string;
+        std::smatch match;
+        if (std::regex_match(key, match, paletteColorRegex)) {
+          int paletteIndex = std::stoi(match[1].str()) - 1;
+          if (paletteIndex >= 0 && paletteIndex < 16) {
+            paletteColors[paletteIndex] = Color(child->valuestring);
+          }
         }
       }
+      child = child->next;
     }
 
-    // Bounds checking for palette access
-    if (activeColor >= 16 || selectedColor >= 16 || iconColor >= 16 || errorColor >= 16 || passwordColor >= 16 || borderColor >= 16) {
+    auto inBounds = [&](int idx) { return idx >= 0 && idx < 16; };
+    if (!inBounds(activeColorIdx) || !inBounds(selectedColorIdx) || !inBounds(iconColorIdx) || !inBounds(errorColorIdx) || !inBounds(passwordColorIdx) || !inBounds(borderColorIdx)) {
       throw std::runtime_error("Palette color index out of bounds");
     }
 
-    Color activeColorValue = paletteColors[activeColor];
-    Color selectedColorValue = paletteColors[selectedColor];
-    Color iconColorValue = paletteColors[iconColor];
-    Color errorColorValue = paletteColors[errorColor];
-    Color passwordColorValue = paletteColors[passwordColor];
-    Color borderColorValue = paletteColors[borderColor];
+    Color activeColorValue = paletteColors[activeColorIdx];
+    Color selectedColorValue = paletteColors[selectedColorIdx];
+    Color iconColorValue = paletteColors[iconColorIdx];
+    Color errorColorValue = paletteColors[errorColorIdx];
+    Color passwordColorValue = paletteColors[passwordColorIdx];
+    Color borderColorValue = paletteColors[borderColorIdx];
 
-    Color mainColors[8] = {backgroundColor, foregroundColor, activeColorValue,   selectedColorValue,
-                           iconColorValue,  errorColorValue, passwordColorValue, borderColorValue};
+    Color mainColors[8] = {backgroundColor, foregroundColor, activeColorValue, selectedColorValue,
+                           iconColorValue, errorColorValue, passwordColorValue, borderColorValue};
 
     return Colorscheme(mainColors, paletteColors);
   }

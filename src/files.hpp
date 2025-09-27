@@ -1,5 +1,4 @@
 #include "json.hpp"
-#include "utils/headers.hpp"
 #include "utils/utils.hpp"
 
 namespace fs = std::filesystem;
@@ -497,7 +496,6 @@ public:
 
     if (!shellWriter->replaceWithChecking("wallpaper", config.wallpaper)) {
       exitCode = false;
-      std::cout << shellWriter->getFile().filename() << std::endl;
     }
 
     if (!shellWriter->writeToFile())
@@ -825,24 +823,8 @@ public:
     const char *fileToEdit = editTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
     std::cout << "Writing to: " << fileToEdit << std::endl;
 
-    // Read file using streams for safer handling
-    std::ifstream input(fileToEdit, std::ios::binary);
-    if (!input) {
-      std::cerr << "Unable to open file for reading: " << fileToEdit << std::endl;
-      return false;
-    }
-
-    // Read entire file into string
-    std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-    input.close();
-
-    // Parse JSON from string
-    cJSON *json = cJSON_Parse(content.c_str());
-    if (json == NULL) {
-      const char *error_ptr = cJSON_GetErrorPtr();
-      if (error_ptr != NULL) {
-        std::cerr << "Error parsing JSON at: " << error_ptr << std::endl;
-      }
+    cJSON *json = getJsonFromFile(fileToEdit);
+    if (json == nullptr) {
       return false;
     }
 

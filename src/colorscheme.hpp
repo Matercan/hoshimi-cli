@@ -32,6 +32,31 @@ public:
       }
     }
   }
+  Color(const char *hexS) {
+    std::string hex(hexS);
+    if (hex[0] == '#') {
+      hex.erase(0, 1);
+    }
+
+    while (hex.length() < 6)
+      hex += '0';
+
+    for (std::string::size_type i = 0; i < hex.length(); i += 2) {
+      std::string hedec = {hex[i], hex[i + 1]};
+      int val = std::stoi(hedec, nullptr, 16);
+      switch (i) {
+      case 0:
+        r = val;
+        break;
+      case 2:
+        g = val;
+        break;
+      case 4:
+        b = val;
+        break;
+      }
+    }
+  }
 
   // Convert to hex string
   std::string toHex() const {

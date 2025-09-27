@@ -23,8 +23,6 @@ configure_file(
 
 find_package(Boost REQUIRED)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(jsoncpp REQUIRED jsoncpp)
-
 pkg_check_modules(cJSON REQUIRED libcjson)
 
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
@@ -42,6 +40,6 @@ target_compile_options(hoshimi PRIVATE
 )
 target_include_directories(hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
-target_link_libraries(hoshimi PRIVATE Boost::boost cjson ${jsoncpp_LIBRARIES})
-target_include_directories(hoshimi PRIVATE ${jsoncpp_INCLUDE_DIRS} ${cJSON_INCLUDE_DIRS})
+target_link_libraries(hoshimi PRIVATE Boost::boost cjson)
+target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
 target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
