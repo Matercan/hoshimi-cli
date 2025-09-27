@@ -60,16 +60,27 @@ public:
   }
 
   // Convert to hex string
-  std::string toHex(FLAGS flag = FLAGS::NOFLAGS) const {
+  std::string toHex(const FLAGS &flag = FLAGS::NOFLAGS) const {
     std::stringstream ss;
-    if (flag != FLAGS::NHASH)
-      ss << "#";
-    else if (flag == FLAGS::WQUOT)
-      ss << "\"";
-    ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(r) << std::setw(2) << static_cast<int>(g) << std::setw(2)
-       << static_cast<int>(b);
+
+    // If WQUOT, open with a quote
     if (flag == FLAGS::WQUOT)
-      ss << "\"";
+      ss << '"';
+
+    // If not NHASH, include the leading '#'
+    if (flag != FLAGS::NHASH)
+      ss << '#';
+
+    // Ensure we print two hex digits per color component with leading zeros
+    ss << std::hex << std::setfill('0') << std::nouppercase;
+    ss << std::setw(2) << (static_cast<int>(r) & 0xFF);
+    ss << std::setw(2) << (static_cast<int>(g) & 0xFF);
+    ss << std::setw(2) << (static_cast<int>(b) & 0xFF);
+
+    // Close quote if requested
+    if (flag == FLAGS::WQUOT)
+      ss << '"';
+
     return ss.str();
   }
 

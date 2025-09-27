@@ -173,7 +173,7 @@ private:
 
   void installDirectory(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
                         const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
-    if (processed == total_files) {
+    if (processed >= total_files) {
       if (verbose) {
         std::cout << "Processed all files" << std::endl;
       }
@@ -199,6 +199,12 @@ private:
       try {
         if (fs::is_directory(entry, ec)) {
           if (!ec) {
+            if (processed >= total_files) {
+              if (verbose) {
+                std::cout << "Processed all files" << std::endl;
+              }
+              return;
+            }
             installDirectory(entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
           }
         } else if (!ec) {
@@ -407,6 +413,52 @@ public:
 
   fs::path getFile() { return file; }
 
+  void append(std::string text) { newContents += text; }
+  void append(const char *text) { newContents += std::string(text); }
+  void append(const std::string  &text, const int &line) {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updated_contents;
+    int current_line = 0;
+
+    while (std::getline(stream, line_content)) {
+      if (current_line == line) {
+        updated_contents += text + "\n";
+      }
+      updated_contents += line_content + "\n";
+      current_line++;
+    }
+
+    // If the specified line is beyond the current number of lines, append at the end
+    if (line >= current_line) {
+      updated_contents += text + "\n";
+    }
+
+    newContents = updated_contents;
+  }
+  void writeLine(const std::string &text, const int &line) {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updated_contents;
+    int current_line = 0;
+
+    while (std::getline(stream, line_content)) {
+      if (current_line == line) {
+        updated_contents += text + "\n";
+      } else {
+        updated_contents += line_content + "\n";
+      }
+      current_line++;
+    }
+
+    // If the specified line is beyond the current number of lines, append at the end
+    if (line >= current_line) {
+      updated_contents += text + "\n";
+    }
+
+    newContents = updated_contents;
+  }
+
   bool replaceValue(std::string key, std::string value, FileType *fileType) {
     std::regex regex;
     std::string regexReplacement;
@@ -434,8 +486,7 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
-      // std::cerr << "\033[1;31mError writing value " << value << " to " << key << "\033[0m" << std::endl;
-      return exit_code;
+      std::cerr << "\033[1;31mError writing value " << value << " to " << key << "\033[0m" << std::endl;
     return exit_code;
   }
 
@@ -592,16 +643,17 @@ public:
   bool writeConfig() {
     bool exitCode = true;
 
-    writer.replaceWithChecking("background", colors.backgroundColor.toHex());
-    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex());
-    writer.replaceWithChecking("cursor_color", colors.selectedColor.toHex());
-    writer.replaceWithChecking("selection_background", colors.activeColor.toHex());
+    writer.replaceWithChecking("background", colors.backgroundColor.toHex(Color::FLAGS::NHASH));
+    writer.writeLine("background=" + colors.backgroundColor.toHex(Color::FLAGS::NHASH), 2);
+    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex(Color::FLAGS::NHASH));
+    writer.replaceWithChecking("cursor_color", colors.selectedColor.toHex(Color::FLAGS::NHASH));
+    writer.replaceWithChecking("selection_background", colors.activeColor.toHex(Color::FLAGS::NHASH));
 
     for (int i = 0; i < 8; ++i) {
-      writer.replaceWithChecking("regular" + std::to_string(i), colors.palette[i].toHex());
+      writer.replaceWithChecking("regular" + std::to_string(i), colors.palette[i].toHex(Color::FLAGS::NHASH));
     }
     for (int i = 8; i < 16; ++i) {
-      writer.replaceWithChecking("bright" + std::to_string(i-8), colors.palette[i].toHex());
+      writer.replaceWithChecking("bright" + std::to_string(i-8), colors.palette[i].toHex(Color::FLAGS::NHASH));
     }
 
     if (!writer.writeToFile()) {
@@ -682,24 +734,19 @@ public:
 
     // Build the file contents using the user's bracket-style template
     std::string out;
-    out += "[colors]\n";
-    out += "cursor = \"" + colors.selectedColor.toHex() + "\"\n";
-    out += "search = \"\"\n";
-    out += "hints = \"\"\n";
-    out += "selection = \"" + colors.activeColor.toHex() + "\"\n";
-    out += "footer_bar = \"\"\n";
+    out += "[colors]\n";    
     out += "transparent_background_colors = true\n\n";
 
     out += "[colors.primary]\n";
-    out += "background = \"" + colors.backgroundColor.toHex() + "\"\n";
-    out += "foreground = \"" + colors.foregroundColor.toHex() + "\"\n\n";
+    out += "background = " + colors.backgroundColor.toHex(Color::FLAGS::WQUOT) + "\n";
+    out += "foreground = " + colors.foregroundColor.toHex(Color::FLAGS::WQUOT) + "\n\n";
 
     // Normal colors (standard order)
     static const char *normal_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
     out += "[colors.normal]\n";
     for (int i = 0; i < 8; ++i) {
-      std::string hex = (i < (int)colors.palette.size()) ? colors.palette[i].toHex() : std::string("#000000");
-      out += std::string(normal_names[i]) + " = \"" + hex + "\"\n";
+      std::string hex = (i < (int)colors.palette.size()) ? colors.palette[i].toHex(Color::FLAGS::WQUOT) : std::string("#000000");
+      out += std::string(normal_names[i]) + " = " + hex + "\n";
     }
     out += "\n";
 
@@ -708,8 +755,8 @@ public:
     out += "[colors.bright]\n";
     for (int i = 0; i < 8; ++i) {
       int idx = 8 + i;
-      std::string hex = (idx < (int)colors.palette.size()) ? colors.palette[idx].toHex() : colors.palette[i].toHex();
-      out += std::string(bright_names[i]) + " = \"" + hex + "\"\n";
+      std::string hex = (idx < (int)colors.palette.size()) ? colors.palette[idx].toHex(Color::FLAGS::WQUOT) : colors.palette[i].toHex();
+      out += std::string(bright_names[i]) + " = " + hex + "\n";
     }
     out += "\n";
 
