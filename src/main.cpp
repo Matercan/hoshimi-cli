@@ -41,28 +41,21 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
 
   std::cout << "OPTIONS:\n";
 
-  // Generate options from config vector
-  for (const auto &flag : config) {
-    if (!flag.args.empty()) {
-      std::cout << "    ";
+  std::cout << "    -h, --help                              Show this help message\n";
+  std::cout << "    -v, --verbose                           Enable verbose output (show detailed operations)\n";
+  std::cout << "    -f, --force                             Force overwrite existing files without backup\n";
+  std::cout << "    -p, --packages <pkg1,pkg2,...>          Comma-separated list of packages to install or source\n";
+  std::cout << "    -np, --not-packages <pkg1,pkg2,...>     Comma-separated list of packages NOT to install or source\n";
+  std::cout << "    --no-secondary-commands                 Don't do followup commands\n";
+  std::cout << "    --version                               Show version information\n\n";
 
-      // Print all aliases for this flag
-      for (size_t i = 0; i < flag.args.size(); ++i) {
-        std::cout << flag.args[i];
-        if (i < flag.args.size() - 1) {
-          std::cout << ", ";
-        }
-      }
-
-      // Add padding and description
-      std::cout << "    " << (flag.description.empty() ? "[No description]" : flag.description) << "\n";
-    }
-  }
   std::cout << "\nEXAMPLES:\n";
-  std::cout << "    " + program_name + " install -p hypr,fastfetch\n";
+  std::cout << "    " + program_name + " install -p hypr,fastfetch -v\n";
   std::cout << "    " + program_name + " source -p quickshell\n";
   std::cout << "    " + program_name + " arch-install\n";
-  std::cout << "    " + program_name + " -np hypr --no-secondary-commands\n";
+  std::cout << "    " + program_name + " install -np hypr --no-secondary-commands\n\n";
+
+  std::cout << "Subcommands have their own help" << std::endl;
 }
 
 void restart(std::vector<Flag> &config, char *argv[]);
@@ -93,9 +86,19 @@ int main(int argc, char *argv[]) {
 
   std::string command = argv[1];
 
-
   if (command == "install") {
     FilesManager filesManager;
+
+    if (config[2].present) {
+      std::cout << argv[0] << " install installs hoshimi dotfiles.";
+      std::cout << "Dotfiles modifiable by Hoshimi config will be copied instead of symlinked." << std::endl;
+      std::cout << "The dotfiles' source is located in " << filesManager.getdotfilesDirectory() << std::endl;
+      std::cout << "Unless running in force mode, the existing files will be backed up to "
+                << filesManager.getdotfilesDirectory() / ".backup/"
+                << " before being replaced." << std::endl;
+      std::cout << "Use '" << argv[0] << " help' to see all available commands and options." << std::endl;
+      return 0;
+    }
 
     if (filesManager.install_dotfiles(packages, notPackages, config[0].present, config[3].present) != 0)
       return 1;
@@ -108,33 +111,32 @@ int main(int argc, char *argv[]) {
       std::cout << "and files backed up";
     std::cout << "." << std::endl;
   } else if (command == "update") {
+    FilesManager filesManager;
 
-    std::string HOSHIMI_HOME;
-
-    // Safely get HOME environment variable
-    const char *home_env = getenv("HOME");
-    if (!home_env) {
-      std::cerr << "HOME environment variable not set" << std::endl;
-      return 1;
-    }
-    const std::string HOME = home_env;
-
-    // Check XDG_DATA_HOME
-    const char *xdg_data_home = getenv("XDG_DATA_HOME");
-    if (xdg_data_home && fs::exists(xdg_data_home)) {
-      HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
-    } else {
-      HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
+    if (config[2].present) {
+      std::cout << argv[0] << " update updates hoshimi dotfiles to the most recent commit on master branch." << std::endl;
+      std::cout << "The dotfiles' source is located in " << filesManager.getdotfilesDirectory() << std::endl;
+      std::cout << "Use '" << argv[0] << " help' to see all available commands and options." << std::endl;
+      return 0;
     }
 
-    const std::string UPDATE_COMMAND = "cd " + HOSHIMI_HOME + " && git pull";
+    std::filesystem::path HOSHIMI_HOME = filesManager.getdotfilesDirectory().parent_path();
+
+    const std::string UPDATE_COMMAND = "cd " + HOSHIMI_HOME.string() + " && git pull";
     if (system(UPDATE_COMMAND.c_str()) == 0) {
       return 0;
     } else {
-      std::cout << "Hoshimi failed to update. Check if the directory " << HOSHIMI_HOME << "exists or not";
+      std::cout << "Hoshimi failed to update. Check if the directory " << HOSHIMI_HOME.string() << " exists or not";
       return 2;
     }
   } else if (command == "source") {
+    if (config[2].present) {
+      std::cout << argv[0] << " source sources the current configuration, updating the modifiable dotfiles." << std::endl;
+      std::cout << "You can specify which packages to source with the -p/--packages and -np/--not-packages flags." << std::endl;
+      std::cout << "Use '" << argv[0] << " help' to see all available commands and options." << std::endl;
+      return 0;
+    }
+
     if (config[3].present) {
       for (size_t i = 0; i < packages.size(); ++i) {
         if (packages[i] == "ghostty") {
@@ -156,6 +158,14 @@ int main(int argc, char *argv[]) {
     }
 
   } else if (command == "config") {
+    if (config[2].present) {
+      std::cout << argv[0] << " config gets or sets the config options within your configuration." << std::endl;
+      std::cout << "Usage: " << argv[0] << " config <key1> <key2> ... get/set <value>" << std::endl;
+      std::cout << "For example, to set the wallpaper directory: " << argv[0] << " config globals wallpaperDirectory set ~/Pictures/Wallpapers" << std::endl;
+      std::cout << "To get the current wallpaper directory: " << argv[0] << " config globals wallpaperDirectory get" << std::endl;
+      return 0;
+    }
+
     std::vector<std::string> vec;
     std::string configArg;
     bool setB;
@@ -184,12 +194,24 @@ int main(int argc, char *argv[]) {
     return 0;
 
   } else if (command == "arch-install") {
+    if (config[2].present) {
+      std::cout << argv[0] << " arch-install installs all the packages neccessary for this shell using paru." << std::endl;
+      std::cout << "Use '" << argv[0] << " help' to see all available commands and options." << std::endl;
+      return 0;
+    }
+
     bool retFlag;
     int retVal = archInstall(config, retFlag);
     if (retFlag)
       return retVal;
 
   } else if (command == "restart") {
+    if (config[2].present) {
+      std::cout << argv[0] << " restart (re)starts the shell and reloads terminals." << std::endl;
+      std::cout << "Use '" << argv[0] << " help' to see all available commands and options." << std::endl;
+      return 0;
+    }
+
     restart(config, argv);
 
   } else if (command == "version") {

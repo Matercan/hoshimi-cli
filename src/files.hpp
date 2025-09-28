@@ -469,7 +469,7 @@ public:
     }
     if (*fileType == FileType::VALUE_PAIR) {
       // Accept both "key = value" and "key: value" styles (covers many config formats)
-      std::string pattern = "(^|\\n)(" + key + "\\s*(?:=|:)\\s*)([^\\n]*)";
+      std::string pattern = "(^|\\n)(" + key + "\\s*=\\s*)([^\\n]*)";
       regex = std::regex(pattern);
       regexReplacement = "$1$2" + value;
     }
