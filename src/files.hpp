@@ -1,5 +1,6 @@
 #include "json.hpp"
 #include "utils/utils.hpp"
+#include <boost/algorithm/string.hpp>
 
 namespace fs = std::filesystem;
 
@@ -171,12 +172,6 @@ private:
 
   void installDirectory(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
                         const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
-    if (processed >= total_files) {
-      if (verbose) {
-        HLOG("install") << "Processed all files" << "." << std::endl;
-      }
-      return;
-    }
 
     static std::mutex threads_mutex;
     std::vector<std::thread> threads;
@@ -197,12 +192,6 @@ private:
       try {
         if (fs::is_directory(entry, ec)) {
           if (!ec) {
-            if (processed >= total_files) {
-              if (verbose) {
-                HLOG("install") << "Processed all files" << "." << std::endl;
-              }
-              return;
-            }
             installDirectory(entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
           }
         } else if (!ec) {
@@ -487,26 +476,69 @@ public:
   }
 
   bool replaceValue(std::string key, std::string value, FileType *fileType) {
-    std::regex regex;
-    std::string regexReplacement;
+    std::string updatedContents;
 
     if (filetype != FileType::DEFAULT_VALUE)
       fileType = &filetype;
 
+    std::string line;
+    std::istringstream newContentsStream(newContents);
+
     if (*fileType == FileType::QS) {
-      std::string pattern = "((?:property\\s+\\w+\\s+)?" + key + "\\s*:\\s*)\"[^\"]*\"";
-      regex = std::regex(pattern);
-      regexReplacement = "$1\"" + value + "\"";
+      
+      while (getline(newContentsStream, line)) {
+        if (boost::algorithm::contains(line, key)) {
+          if (line.find(":") == std::string::npos) {
+            updatedContents += line + "\n";
+            continue;
+          }
+          if (boost::algorithm::contains(line, "//")) {
+            updatedContents += line + "\n";
+            continue;
+          }
+          if (boost::algorithm::contains(line, ".")) {
+            updatedContents += line + "\n";
+            continue;
+          }
+
+          std::string newLine = "";
+          std::vector<std::string> split;
+
+          boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_off);
+
+          newLine += split[0];
+          newLine += ": \"";
+          newLine += value + "\"";
+
+          updatedContents += newLine + "\n";
+        }
+        else {
+          updatedContents += line + "\n";
+        }
+      }
+
     }
     if (*fileType == FileType::VALUE_PAIR) {
-      // Accept both "key = value" and "key: value" styles (covers many config formats)
-      std::string pattern = "(^|\\n)(" + key + "\\s*=\\s*)([^\\n]*)";
-      regex = std::regex(pattern);
-      regexReplacement = "$1$2" + value;
+      while (getline(newContentsStream, line)) {
+        if (boost::algorithm::contains(line, key)) {
+          std::string newLine;
+          std::vector<std::string> split;
+          boost::algorithm::split(split, line, boost::is_any_of("="), boost::token_compress_on);
+          
+          for (int i = 0; i < split.size()-1; ++i) 
+            newLine +=  split[i]+"=";
+          
+          newLine += value;   
+          updatedContents += newLine + "\n";
+        }
+        else {
+          updatedContents += line + "\n";
+        }
+      }
     }
 
     std::string oldContents = newContents;
-    newContents = std::regex_replace(newContents, regex, regexReplacement);
+    newContents = updatedContents;
     return newContents != oldContents;
   }
 
