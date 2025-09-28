@@ -56,7 +56,7 @@ private:
     for (const auto &component : path) {
 
       pathS += component;
-      if (component != path[path.size()-1])
+      if (component != path[path.size() - 1])
         pathS += "/";
     }
     return pathS;
@@ -170,11 +170,10 @@ private:
       }
 
       // Create parent directory if it doesn't exist
-      try { 
+      try {
         fs::create_directories(home_equivalent.parent_path());
-      }
-      catch (const fs::filesystem_error &e) {
-          HERR("install " + dir_entry.path().string()) << "Filesystem error creating parent directories: " << e.what() << std::endl;
+      } catch (const fs::filesystem_error &e) {
+        HERR("install " + dir_entry.path().string()) << "Filesystem error creating parent directories: " << e.what() << std::endl;
         return;
       }
 

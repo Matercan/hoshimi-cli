@@ -224,7 +224,8 @@ public:
     }
 
     auto inBounds = [&](int idx) { return idx >= 0 && idx < 16; };
-    if (!inBounds(activeColorIdx) || !inBounds(selectedColorIdx) || !inBounds(iconColorIdx) || !inBounds(errorColorIdx) || !inBounds(passwordColorIdx) || !inBounds(borderColorIdx)) {
+    if (!inBounds(activeColorIdx) || !inBounds(selectedColorIdx) || !inBounds(iconColorIdx) || !inBounds(errorColorIdx) ||
+        !inBounds(passwordColorIdx) || !inBounds(borderColorIdx)) {
       throw std::runtime_error("Palette color index out of bounds");
     }
 
@@ -235,8 +236,8 @@ public:
     Color passwordColorValue = paletteColors[passwordColorIdx];
     Color borderColorValue = paletteColors[borderColorIdx];
 
-    Color mainColors[8] = {backgroundColor, foregroundColor, activeColorValue, selectedColorValue,
-                           iconColorValue, errorColorValue, passwordColorValue, borderColorValue};
+    Color mainColors[8] = {backgroundColor, foregroundColor, activeColorValue,   selectedColorValue,
+                           iconColorValue,  errorColorValue, passwordColorValue, borderColorValue};
 
     return Colorscheme(mainColors, paletteColors);
   }

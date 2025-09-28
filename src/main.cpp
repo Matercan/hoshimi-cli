@@ -93,8 +93,7 @@ int main(int argc, char *argv[]) {
       std::cout << argv[0] << " install installs hoshimi dotfiles.";
       std::cout << "Dotfiles modifiable by Hoshimi config will be copied instead of symlinked." << std::endl;
       std::cout << "The dotfiles' source is located in " << filesManager.getdotfilesDirectory() << std::endl;
-      std::cout << "Unless running in force mode, the existing files will be backed up to "
-                << filesManager.getdotfilesDirectory() / ".backup/"
+      std::cout << "Unless running in force mode, the existing files will be backed up to " << filesManager.getdotfilesDirectory() / ".backup/"
                 << " before being replaced." << std::endl;
       std::cout << "Use '" << argv[0] << " help' to see all available commands and options." << std::endl;
       return 0;
@@ -161,7 +160,8 @@ int main(int argc, char *argv[]) {
     if (config[2].present) {
       std::cout << argv[0] << " config gets or sets the config options within your configuration." << std::endl;
       std::cout << "Usage: " << argv[0] << " config <key1> <key2> ... get/set <value>" << std::endl;
-      std::cout << "For example, to set the wallpaper directory: " << argv[0] << " config globals wallpaperDirectory set ~/Pictures/Wallpapers" << std::endl;
+      std::cout << "For example, to set the wallpaper directory: " << argv[0] << " config globals wallpaperDirectory set ~/Pictures/Wallpapers"
+                << std::endl;
       std::cout << "To get the current wallpaper directory: " << argv[0] << " config globals wallpaperDirectory get" << std::endl;
       return 0;
     }
@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
     if (config[0].present) {
       std::cout << "Released on " << HOSHIMI_RELEASE_DATE << std::endl;
     }
-  }  else if (command == "help" || config[2].present) {
+  } else if (command == "help" || config[2].present) {
     print_help(argv[0], config);
   } else {
     HERR("main") << "Unknown command: " << command << "Use '" << argv[0] << " help' to see available commands." << std::endl;
