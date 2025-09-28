@@ -1,27 +1,46 @@
 name: Run clang-format Linter
 
-on: [push]
+on: [push, pull_request]
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  clang-format:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: DoozyX/clang-format-lint-action@v0.20
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Run clang-format
+      uses: DoozyX/clang-format-lint-action@v0.20
       with:
         source: '.'
         exclude: './lib'
-        extensions: 'h,cpp,c'
+        extensions: 'h,hpp,c,cpp,cc,cxx'
         clangFormatVersion: 20
-        inplace: True
-    - uses: EndBug/add-and-commit@v9
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        inplace: true
+
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit changes
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      uses: EndBug/add-and-commit@v9
       with:
-        author_name: Matercan
-        author_email: matercan@proton.me 
-        commit: --sign-off
-        committer_name: Clang Robot
-        message: "Fix: clang format"
-      
+        author_name: Clang Format Bot
+        author_email: actions@github.com
+        committer_name: GitHub Actions
+        committer_email: actions@github.com
+        message: 'style: apply clang-format'
+        add: '.'
