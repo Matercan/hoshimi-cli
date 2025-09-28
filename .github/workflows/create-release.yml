@@ -23,7 +23,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           body: |
             Changes in this Release
-            - First Change
-            - Second Change
+            - Improved performance compared to previous releases
+            - More robust writers especialy for foot.
           draft: false
-          prerelease: false
+          prerelease: true
