@@ -1,6 +1,12 @@
 #include "json.hpp"
 #include "utils/utils.hpp"
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/constants.hpp>
+#include <boost/algorithm/string/find.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <cstddef>
+#include <iterator>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -33,8 +39,48 @@ private:
   fs::path DOTFILES_DIRECTORY;
   fs::path BACKUP_DIRECTORY;
 
-  fs::path findDotfilesRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY); }
-  fs::path findConfigRelativePath(fs::path dotfile) { return fs::relative(dotfile, DOTFILES_DIRECTORY.string() + ".config"); }
+  fs::path findDotfilesRelativePath(const fs::path &dotfile) {
+    std::vector<std::string> path;
+    boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"), boost::token_compress_on);
+
+    auto it = std::find(path.begin(), path.end(), "dotfiles");
+    if (it == path.end()) {
+      // "hoshimi" not found, return empty or handle error
+      return fs::path{};
+    }
+
+    // Erase everything up to and including "hoshimi"
+    path.erase(path.begin(), it + 1);
+
+    std::string pathS;
+    for (const auto &component : path) {
+
+      pathS += component;
+      if (component != path[path.size()-1])
+        pathS += "/";
+    }
+    return pathS;
+  }
+
+  fs::path findConfigRelativePath(const fs::path &dotfile) {
+    std::vector<std::string> path;
+    boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"), boost::token_compress_on);
+
+    auto it = std::find(path.begin(), path.end(), ".config");
+    if (it == path.end()) {
+      // ".config" not found, return empty or handle error
+      return fs::path{};
+    }
+
+    // Erase everything up to and including ".config"
+    path.erase(path.begin(), it + 1);
+
+    std::string pathS;
+    for (const auto &component : path) {
+      pathS += component + "/";
+    }
+    return pathS;
+  }
 
   void install_file(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
                     const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
@@ -124,7 +170,13 @@ private:
       }
 
       // Create parent directory if it doesn't exist
-      fs::create_directories(home_equivalent.parent_path());
+      try { 
+        fs::create_directories(home_equivalent.parent_path());
+      }
+      catch (const fs::filesystem_error &e) {
+          HERR("install " + dir_entry.path().string()) << "Filesystem error creating parent directories: " << e.what() << std::endl;
+        return;
+      }
 
       // Add static mutex for cout synchronization
       static std::mutex cout_mutex;
