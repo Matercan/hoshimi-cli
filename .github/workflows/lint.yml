@@ -16,9 +16,12 @@ jobs:
         clangFormatVersion: 20
         inplace: True
     - uses: EndBug/add-and-commit@v9
-      with:
-        author_name: Clang Robot
-        author_email: robot@example.com
-        message: 'Committing clang-format changes'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        author_name: Matercan
+        author_email: matercan@proton.me 
+        commit: --sign-ff
+        committer_name: Clang Robot
+        message: "Fix: clang format"
+      
