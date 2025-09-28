@@ -21,7 +21,7 @@ jobs:
       with:
         author_name: Matercan
         author_email: matercan@proton.me 
-        commit: --sign-ff
+        commit: --sign-off
         committer_name: Clang Robot
         message: "Fix: clang format"
       
