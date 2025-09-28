@@ -1,6 +1,6 @@
 #include "json.hpp"
 #include "utils/utils.hpp"
-#include <boost/algorithm/string.hpp>
+#include <cstddef>
 
 namespace fs = std::filesystem;
 
@@ -132,7 +132,8 @@ private:
       if (isModifiable(dir_entry.path())) {
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
-          HLOG("install " + dir_entry.path().string()) << "File modifiable by Hoshimi, symlink will not be created." << std::endl;
+          if (processed < total_files)
+            HLOG("install " + dir_entry.path().string()) << "File modifiable by Hoshimi, symlink will not be created." << std::endl;
         }
         fs::copy(dir_entry, home_equivalent);
       } else if (!fs::is_symlink(dir_entry)) {
@@ -414,7 +415,7 @@ public:
 
     newContents = updated_contents;
   }
-  void empty(const char* text) {
+  void empty(const char *text) {
     std::istringstream stream(newContents);
     std::string line_content;
     std::string updated_contents;
@@ -485,7 +486,7 @@ public:
     std::istringstream newContentsStream(newContents);
 
     if (*fileType == FileType::QS) {
-      
+
       while (getline(newContentsStream, line)) {
         if (boost::algorithm::contains(line, key)) {
           if (line.find(":") == std::string::npos) {
@@ -496,7 +497,7 @@ public:
             updatedContents += line + "\n";
             continue;
           }
-          if (boost::algorithm::contains(line, ".")) {
+          if (boost::algorithm::contains(line, "root")) {
             updatedContents += line + "\n";
             continue;
           }
@@ -504,19 +505,17 @@ public:
           std::string newLine = "";
           std::vector<std::string> split;
 
-          boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_off);
+          boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_on);
 
           newLine += split[0];
           newLine += ": \"";
           newLine += value + "\"";
 
           updatedContents += newLine + "\n";
-        }
-        else {
+        } else {
           updatedContents += line + "\n";
         }
       }
-
     }
     if (*fileType == FileType::VALUE_PAIR) {
       while (getline(newContentsStream, line)) {
@@ -524,14 +523,13 @@ public:
           std::string newLine;
           std::vector<std::string> split;
           boost::algorithm::split(split, line, boost::is_any_of("="), boost::token_compress_on);
-          
-          for (int i = 0; i < split.size()-1; ++i) 
-            newLine +=  split[i]+"=";
-          
-          newLine += value;   
+
+          for (size_t i = 0; i < split.size() - 1; ++i)
+            newLine += split[i] + "=";
+
+          newLine += value;
           updatedContents += newLine + "\n";
-        }
-        else {
+        } else {
           updatedContents += line + "\n";
         }
       }
