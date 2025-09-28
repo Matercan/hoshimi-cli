@@ -1,7 +1,6 @@
 #include "json.hpp"
 #include "utils/utils.hpp"
 
-
 namespace fs = std::filesystem;
 
 enum FileType { QS, VALUE_PAIR, DEFAULT_VALUE };
@@ -77,7 +76,7 @@ private:
 
     if (verbose) {
       HLOG("install " + dir_entry.path().string()) << " in_packages: " << file_in_packages << " excluded: " << file_excluded
-                << " will_install: " << file_installed << "." <<  std::endl;
+                                                   << " will_install: " << file_installed << "." << std::endl;
     }
 
     if (!file_installed)
@@ -158,7 +157,8 @@ private:
       processed++;
 
       if (verbose) {
-        HLOG("install") << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << "." << std::endl;
+        HLOG("install") << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << "."
+                        << std::endl;
       } else if (processed <= total_files) { // Add bounds check
         float progress = (float)processed / total_files;
         utils.print_progress_bar(progress, processed, total_files);
@@ -408,10 +408,41 @@ public:
 
   fs::path getFile() { return file; }
 
+  // Empty file (from given point)
   void empty() { newContents = ""; }
+  void empty(const int &line) {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updated_contents;
+    int current_line = 0;
+
+    while (std::getline(stream, line_content)) {
+      if (current_line == line)
+        break;
+      updated_contents += line_content + "\n";
+      current_line++;
+    }
+
+    newContents = updated_contents;
+  }
+  void empty(const char* text) {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updated_contents;
+
+    while (std::getline(stream, line_content)) {
+      if (line_content.find(text) != std::string::npos)
+        break;
+      updated_contents += line_content + "\n";
+    }
+
+    newContents = updated_contents;
+  }
+
+  // Append contents to file
   void append(std::string text) { newContents += text; }
   void append(const char *text) { newContents += std::string(text); }
-  void append(const std::string  &text, const int &line) {
+  void append(const std::string &text, const int &line) {
     std::istringstream stream(newContents);
     std::string line_content;
     std::string updated_contents;
@@ -610,7 +641,7 @@ public:
     if (!writer.writeToFile()) {
       exitCode = false;
 
-      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
+      HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -639,22 +670,25 @@ public:
   bool writeConfig() {
     bool exitCode = true;
 
-    writer.replaceWithChecking("background", colors.backgroundColor.toHex(Color::FLAGS::NHASH));
-    writer.writeLine("background=" + colors.backgroundColor.toHex(Color::FLAGS::NHASH), 2);
-    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex(Color::FLAGS::NHASH));
-    writer.replaceWithChecking("cursor_color", colors.selectedColor.toHex(Color::FLAGS::NHASH));
-    writer.replaceWithChecking("selection_background", colors.activeColor.toHex(Color::FLAGS::NHASH));
+    writer.empty("[colors]");
+    writer.append("[colors]\n");
+
+    writer.append("backdground=" + colors.backgroundColor.toHex(Color::FLAGS::NHASH) + "\n");
+    writer.append("foreground=" + colors.foregroundColor.toHex(Color::FLAGS::NHASH) + "\n");
+    writer.append("selection-background=" + colors.foregroundColor.toHex(Color::FLAGS::NHASH) + "\n\n");
 
     for (int i = 0; i < 8; ++i) {
-      writer.replaceWithChecking("regular" + std::to_string(i), colors.palette[i].toHex(Color::FLAGS::NHASH));
+      writer.append("regular" + std::to_string(i) + "=" + colors.palette[i].toHex(Color::FLAGS::NHASH) + "\n");
     }
+    writer.append("\n");
     for (int i = 8; i < 16; ++i) {
-      writer.replaceWithChecking("bright" + std::to_string(i-8), colors.palette[i].toHex(Color::FLAGS::NHASH));
+      writer.append("bright" + std::to_string(i - 8) + "=" + colors.palette[i].toHex(Color::FLAGS::NHASH) + "\n");
     }
+    writer.append("\n");
 
     if (!writer.writeToFile()) {
       exitCode = false;
-      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
+      HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -697,7 +731,7 @@ public:
 
     if (!writer.writeToFile()) {
       exitCode = false;
-      std::cerr << "Error writing to file: " << writer.getFile().filename() << std::endl;
+      HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -714,67 +748,61 @@ class AlacrittyWriter {
 private:
   Colorscheme colors;
   FilesManager files;
+  WriterBase writer;
 
   fs::path getAlacrittyPath() { return files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/alacritty/themes/hoshimi.toml"); }
 
 public:
-  AlacrittyWriter() { colors = ColorsHandler().getColors(); }
-
-  void reloadAlacritty() {
-    // Alacritty doesn't officially support reload; best-effort HUP
-    system("if pgrep -x alacritty > /dev/null; then pkill -HUP alacritty; fi");
+  AlacrittyWriter() {
+    writer = WriterBase(getAlacrittyPath());
+    colors = ColorsHandler().getColors();
   }
+
+  void reloadAlacritty() { return; }
 
   bool writeConfig() {
     fs::path path = getAlacrittyPath();
 
-    // Build the file contents using the user's bracket-style template
-    std::string out;
-    out += "[colors]\n";    
-    out += "transparent_background_colors = true\n\n";
+    // Build the file contents
+    writer.empty();
 
-    out += "[colors.primary]\n";
-    out += "background = " + colors.backgroundColor.toHex(Color::FLAGS::WQUOT) + "\n";
-    out += "foreground = " + colors.foregroundColor.toHex(Color::FLAGS::WQUOT) + "\n\n";
+    writer.append("# Alacritty color scheme generated by Hoshimi\n");
+    writer.append("[colors]\n");
+    writer.append("transparent_background_colors = true\n\n");
+
+    writer.append("[colors.primary]\n");
+    writer.append("background = " + colors.backgroundColor.toHex(Color::FLAGS::WQUOT) + "\n");
+    writer.append("foreground = " + colors.foregroundColor.toHex(Color::FLAGS::WQUOT) + "\n\n");
 
     // Normal colors (standard order)
     static const char *normal_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
-    out += "[colors.normal]\n";
+    writer.append("[colors.normal]\n");
     for (int i = 0; i < 8; ++i) {
       std::string hex = (i < (int)colors.palette.size()) ? colors.palette[i].toHex(Color::FLAGS::WQUOT) : std::string("#000000");
-      out += std::string(normal_names[i]) + " = " + hex + "\n";
+      writer.append(std::string(normal_names[i]) + " = " + hex + "\n");
     }
-    out += "\n";
+    writer.append("\n");
 
     // Bright colors (palette[8..15])
     static const char *bright_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
-    out += "[colors.bright]\n";
+    writer.append("[colors.bright]\n");
     for (int i = 0; i < 8; ++i) {
       int idx = 8 + i;
       std::string hex = (idx < (int)colors.palette.size()) ? colors.palette[idx].toHex(Color::FLAGS::WQUOT) : colors.palette[i].toHex();
-      out += std::string(bright_names[i]) + " = " + hex + "\n";
+      writer.append(std::string(bright_names[i]) + " = " + hex + "\n");
     }
-    out += "\n";
-
-    // Ensure parent directories exist
-    try {
-      fs::create_directories(path.parent_path());
-    } catch (const std::exception &e) {
-      std::cerr << "Failed to create directories for alacritty file: " << e.what() << std::endl;
-      return false;
-    }
+    writer.append("\n");
 
     // Write to file
-    std::ofstream fout(path.string());
-    if (!fout) {
-      std::cerr << "Unable to open alacritty file for writing: " << path << std::endl;
+    bool retVal = writer.writeToFile();
+
+    if (!retVal) {
+      HERR("Config " + path.string()) << "Error writing to file." << std::endl;
+      writer.revert();
       return false;
     }
-    fout << out;
-    fout.close();
-
     reloadAlacritty();
-    return true;
+    return retVal;
   }
 };
 
@@ -980,7 +1008,7 @@ public:
   const char *getJson(const std::vector<std::string> &keys) {
     const bool getTheme = keys[0] == "theme";
     const char *fileToCheck = getTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
-  HLOG("Json") << "Getting info from " << fileToCheck << "." << std::endl;
+    HLOG("Json") << "Getting info from " << fileToCheck << "." << std::endl;
 
     // Read from file
     std::ifstream input(fileToCheck, std::ios::binary);

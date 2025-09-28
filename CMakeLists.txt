@@ -12,7 +12,7 @@ set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
 project(hoshimi)
 
-set(HOSHIMI_VERSION "0.2.7")
+set(HOSHIMI_VERSION "0.2.8")
 set(HOSHIMI_RELEASE_DATE "28th September")
 
 configure_file(
