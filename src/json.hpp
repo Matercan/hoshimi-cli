@@ -1,7 +1,7 @@
 #pragma once
 
 #include "colorscheme.hpp"
-#include "utils/headers.hpp"
+#include "utils/utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -10,7 +10,7 @@ public:
   cJSON *getJsonFromFile(const char *filePath) {
     std::ifstream input(filePath, std::ios::binary);
     if (!input) {
-      std::cerr << "Unable to open file for reading: " << filePath << std::endl;
+      HERR("JSON") << "Unable to open file for reading: " << filePath << "." << std::endl;
       return nullptr;
     }
 
@@ -21,7 +21,7 @@ public:
     if (json == NULL) {
       const char *error_ptr = cJSON_GetErrorPtr();
       if (error_ptr != NULL) {
-        std::cerr << "Error parsing JSON at: " << &error_ptr << std::endl;
+        HERR("JSON") << "Error parsing JSON at: " << &error_ptr << "." << std::endl;
       }
       return nullptr;
     }
@@ -56,7 +56,7 @@ public:
 
     std::string themeName = getStringOrEmpty(MAIN_CONFIG_JSON, "config");
     if (themeName.empty()) {
-      std::cerr << "Warning: 'config' key missing or not a string in main config: " << MAIN_CONFIG_PATH << std::endl;
+      HERR("json " + MAIN_CONFIG_PATH.string()) << "Warning: 'config' key missing or not a string in main config." << std::endl;
       themeName = "default"; // fallback theme name
     }
 
@@ -141,9 +141,9 @@ public:
     }
 
     if (!found) {
-      std::cerr << "Warning: Wallpaper not found. Tried:" << std::endl;
+      HERR("JSON") << "Warning: Wallpaper not found. Tried:" << std::endl;
       for (const auto &path : possiblePaths) {
-        std::cerr << "  " << path << std::endl;
+        HLOG("JSON") << "\t" << path << std::endl;
       }
       config.wallpaper = ""; // or set a default wallpaper
     }

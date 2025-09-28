@@ -16,8 +16,7 @@ public:
     std::ifstream f(dotfile.string());
 
     if (!f.is_open()) {
-      std::cerr << "Error opening file: " << dotfile.filename() << std::endl;
-      std::cout << "Full file path:" << dotfile.string() << std::endl;
+      HERR("install " + dotfile.string()) << "Error opening file" << "." << std::endl;
       return false;
     }
 
@@ -48,7 +47,7 @@ private:
       progress_bar_active = false;
     }
     if (verbose) {
-      std::cout << "Processing: " << dir_entry << std::endl;
+      HLOG("install") << "Processing: " << dir_entry << "." << std::endl;
     }
 
     fs::path const relative_path = findDotfilesRelativePath(dir_entry.path());
@@ -56,7 +55,7 @@ private:
     fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
     std::string const config_relative_path = findConfigRelativePath(dir_entry.path());
     if (verbose) {
-      std::cout << "Checking path: " << config_relative_path << std::endl;
+      HLOG("install") << "Checking path: " << config_relative_path << "." << std::endl;
     }
 
     // Check if file matches any package in the include list
@@ -77,8 +76,8 @@ private:
     bool file_installed = !file_excluded && (!onlyPackages || (onlyPackages && file_in_packages));
 
     if (verbose) {
-      std::cout << "File: " << dir_entry.path().filename() << " in_packages: " << file_in_packages << " excluded: " << file_excluded
-                << " will_install: " << file_installed << std::endl;
+      HLOG("install " + dir_entry.path().string()) << " in_packages: " << file_in_packages << " excluded: " << file_excluded
+                << " will_install: " << file_installed << "." <<  std::endl;
     }
 
     if (!file_installed)
@@ -91,7 +90,7 @@ private:
 
       if (fs::is_directory(home_equivalent)) {
         if (verbose) {
-          std::cout << "Backing up directory: " << home_equivalent << " to " << backup_path << std::endl;
+          HLOG("install") << "Backing up directory: " << home_equivalent << " to " << backup_path << "." << std::endl;
         }
         // For directories, only backup if backup doesn't exist
         if (!fs::exists(backup_path)) {
@@ -99,7 +98,7 @@ private:
         }
       } else {
         if (verbose) {
-          std::cout << "Backing up file: " << home_equivalent << " to " << backup_path << std::endl;
+          HLOG("install") << "Backing up file: " << home_equivalent << " to " << backup_path << "." << std::endl;
         }
         fs::rename(home_equivalent, backup_path);
       }
@@ -109,14 +108,14 @@ private:
     if (fs::is_directory(dir_entry)) {
       if (!fs::exists(home_equivalent)) {
         if (verbose) {
-          std::cout << "Creating directory: " << home_equivalent << std::endl;
+          HLOG("install") << "Creating directory: " << home_equivalent << "." << std::endl;
         }
         fs::create_directories(home_equivalent);
       }
     } else {
       // For files, create symlink (file should be backed up by now)
       if (verbose) {
-        std::cout << "Creating symlink: " << dir_entry << " -> " << home_equivalent << std::endl;
+        HLOG("install") << "Creating symlink: " << dir_entry << " -> " << home_equivalent << "." << std::endl;
       }
 
       // Extra safety check
@@ -133,22 +132,21 @@ private:
       if (isModifiable(dir_entry.path())) {
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
-          // std::cout << "\033[1;32mFile " << dir_entry.path().filename() << " modifiable by Hoshimi, symlink will not be created\033[0m" <<
-          // std::endl;
+          HLOG("install " + dir_entry.path().string()) << "File modifiable by Hoshimi, symlink will not be created." << std::endl;
         }
         fs::copy(dir_entry, home_equivalent);
       } else if (!fs::is_symlink(dir_entry)) {
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
           if (verbose)
-            std::cout << "Creating symlink for: " << dir_entry.path().filename() << std::endl;
+            HLOG("install") << "Creating symlink for: " << dir_entry.path().filename() << "." << std::endl;
         }
         fs::create_symlink(dir_entry, home_equivalent);
       } else {
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
           if (verbose)
-            std::cout << "Removing existing symlink: " << dir_entry.path().filename() << std::endl;
+            HLOG("install") << "Removing existing symlink: " << dir_entry.path().filename() << "." << std::endl;
         }
         fs::remove(home_equivalent);
       }
@@ -160,7 +158,7 @@ private:
       processed++;
 
       if (verbose) {
-        std::cout << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << std::endl;
+        HLOG("install") << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << "." << std::endl;
       } else if (processed <= total_files) { // Add bounds check
         float progress = (float)processed / total_files;
         utils.print_progress_bar(progress, processed, total_files);
@@ -175,7 +173,7 @@ private:
                         const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
     if (processed >= total_files) {
       if (verbose) {
-        std::cout << "Processed all files" << std::endl;
+        HLOG("install") << "Processed all files" << "." << std::endl;
       }
       return;
     }
@@ -201,7 +199,7 @@ private:
           if (!ec) {
             if (processed >= total_files) {
               if (verbose) {
-                std::cout << "Processed all files" << std::endl;
+                HLOG("install") << "Processed all files" << "." << std::endl;
               }
               return;
             }
@@ -225,7 +223,7 @@ private:
         }
       } catch (const fs::filesystem_error &e) {
         if (verbose) {
-          std::cerr << "Warning: Error processing " << entry.path() << ": " << e.what() << std::endl;
+          HERR(std::string("install") + dir_entry.path().string()) << "Filesystem error: " << e.what() << std::endl;
         }
         continue;
       }
@@ -256,7 +254,8 @@ public:
     if (!fs::exists(HOSHIMI_HOME)) {
       const std::string DOWNLOAD_COMMAND = "git clone https://github.com/Matercan/hoshimi-dots.git " + HOSHIMI_HOME;
 
-      std::cout << "Running: " << DOWNLOAD_COMMAND << std::endl;
+      HLOG("Install") << "Cloning dotfiles from GitHub to " << HOSHIMI_HOME << "." << std::endl;
+      HLOG("Install") << "Running: " << DOWNLOAD_COMMAND << "." << std::endl;
       int result = system(DOWNLOAD_COMMAND.c_str());
       if (result != 0) {
         std::cerr << "Git clone failed" << std::endl;
@@ -269,7 +268,7 @@ public:
 
   int install_dotfiles(std::vector<std::string> packages, std::vector<std::string> notPackages, bool verbose, bool onlyPackages) {
     if (!fs::exists(DOTFILES_DIRECTORY)) {
-      std::cout << "Dotfiles directory not found: " << DOTFILES_DIRECTORY << std::endl;
+      HERR("Install " + DOTFILES_DIRECTORY.string()) << " Directory not found." << std::endl;
       return 1;
     }
 
@@ -314,12 +313,12 @@ public:
         }
       }
     } catch (const fs::filesystem_error &e) {
-      std::cerr << "Error counting files: " << e.what() << std::endl;
+      HERR("Install " + DOTFILES_DIRECTORY.string()) " Filesystem error: " << e.what() << std::endl;
       return 1;
     }
 
     if (verbose) {
-      std::cout << "Found " << total_files << " files to process.\n" << std::endl;
+      HLOG("Install") << "Total files to process: " << total_files << "." << std::endl;
     }
 
     size_t processed = 0;
@@ -347,8 +346,7 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      std::cerr << "Error opening the file: " << file.filename() << std::endl;
-      std::cout << "Full file path: " << file.string() << std::endl;
+      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
     }
 
     std::string s;
@@ -368,8 +366,7 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      std::cerr << "Error opening the file: " << file.filename() << std::endl;
-      std::cout << "Full file path: " << file.string() << std::endl;
+      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
     }
 
     std::string s;
@@ -386,8 +383,7 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      std::cerr << "file could not open: " << file.filename() << std::endl;
-      std::cout << "Full path: " << file.string() << std::endl;
+      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
       return false;
     }
 
@@ -401,8 +397,7 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      std::cerr << "file could not open: " << file.filename() << std::endl;
-      std::cout << "Full path: " << file.string() << std::endl;
+      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
       return;
     }
 
@@ -413,6 +408,7 @@ public:
 
   fs::path getFile() { return file; }
 
+  void empty() { newContents = ""; }
   void append(std::string text) { newContents += text; }
   void append(const char *text) { newContents += std::string(text); }
   void append(const std::string  &text, const int &line) {
@@ -486,7 +482,7 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
-      std::cerr << "\033[1;31mError writing value " << value << " to " << key << "\033[0m" << std::endl;
+      HERR("Config") << file.string() << " Value of " << key << " not changed." << std::endl;
     return exit_code;
   }
 
@@ -984,7 +980,7 @@ public:
   const char *getJson(const std::vector<std::string> &keys) {
     const bool getTheme = keys[0] == "theme";
     const char *fileToCheck = getTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
-    std::cout << "Checking: " << fileToCheck << std::endl;
+  HLOG("Json") << "Getting info from " << fileToCheck << "." << std::endl;
 
     // Read from file
     std::ifstream input(fileToCheck, std::ios::binary);
@@ -1029,7 +1025,7 @@ public:
   bool writeJson(const std::vector<std::string> &keys, const char *value) {
     const bool editTheme = keys[0] == "theme";
     const char *fileToEdit = editTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
-    std::cout << "Writing to: " << fileToEdit << std::endl;
+    HLOG("Json") << "Editing " << fileToEdit << "." << std::endl;
 
     cJSON *json = getJsonFromFile(fileToEdit);
     if (json == nullptr) {

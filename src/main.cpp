@@ -65,6 +65,16 @@ void print_help(const std::string &program_name, const std::vector<Flag> &config
   std::cout << "    " + program_name + " -np hypr --no-secondary-commands\n";
 }
 
+void restart(std::vector<Flag> &config, char *argv[]);
+
+int archInstall(std::vector<Flag> &config, bool &retFlag);
+
+void getPackageInfo(int argc, std::vector<Flag> &config, char *argv[]);
+
+void getConfigArg(int argc, char *argv[], bool &setB, std::string &configArg, std::vector<std::string> &vec);
+
+void sourceConfig();
+
 int main(int argc, char *argv[]) {
   std::vector<Flag> config = {Flag(false, {"-v", "--verbose"}, "Enable verbose output (show detailed operations)"),
                               Flag(false, {"-f", "--force"}, "Force overwrite existing files without backup"),
@@ -79,43 +89,19 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  for (int i = 2; i < argc; ++i) {
-    if (argc == 2)
-      break;
-    int packagesArgument, noPackagesArgument;
-
-    for (size_t j = 0; j < config.size(); ++j) {
-      if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {
-        config[j].present = !config[j].present;
-        if (j == 3)
-          packagesArgument = ++i;
-        else if (j == 4)
-          noPackagesArgument = ++i;
-      }
-    }
-
-    if (i == packagesArgument) {
-      boost::split(packages, argv[i], boost::is_any_of(","), boost::token_compress_on);
-    } else if (i == noPackagesArgument) {
-      boost::split(notPackages, argv[i], boost::is_any_of(","), boost::token_compress_on);
-    }
-  }
+  getPackageInfo(argc, config, argv);
 
   std::string command = argv[1];
 
-  if (command == "help" || config[2].present) {
-    print_help(argv[0], config);
-  } else if (command == "install") {
+
+  if (command == "install") {
     FilesManager filesManager;
 
     if (filesManager.install_dotfiles(packages, notPackages, config[0].present, config[3].present) != 0)
       return 1;
 
-    std::cout << config[5].present << std::endl;
-
-    // HACK: converting to a c string and then to a standard string.
     if (!config[5].present)
-      system(((std::string)argv[0] + " source").c_str());
+      sourceConfig();
 
     std::cout << std::endl << "Hoshimi Dotfiles installed ";
     if (!config[1].present)
@@ -157,23 +143,16 @@ int main(int argc, char *argv[]) {
         } else if (packages[i] == "quickshell") {
           QuickshellWriter qs;
           qs.writeColors();
+        } else if (packages[i] == "alacritty") {
+          AlacrittyWriter as;
+          as.writeConfig();
+        } else if (packages[i] == "foot") {
+          FootWriter fs;
+          fs.writeConfig();
         }
       }
     } else {
-      GhosttyWriter *gs = new GhosttyWriter();
-      gs->writeConfig();
-      delete gs;
-      AlacrittyWriter *as = new AlacrittyWriter();
-      as->writeConfig();
-      delete as;
-      FootWriter *fs = new FootWriter();
-      fs->writeConfig();
-      delete fs;
-
-      QuickshellWriter *qs = new QuickshellWriter();
-      qs->writeColors();
-      qs->writeShell();
-      delete qs;
+      sourceConfig();
     }
 
   } else if (command == "config") {
@@ -181,23 +160,7 @@ int main(int argc, char *argv[]) {
     std::string configArg;
     bool setB;
 
-    // Process arguments until we find "set"
-    for (int i = 2; i < argc; ++i) {
-      if (strcmp(argv[i], "set") == 0) {
-        setB = true;
-        if (i + 1 < argc) {
-          configArg = argv[i + 1];
-          break;
-        } else {
-          std::cerr << "No value after set" << std::endl;
-        }
-      } else if (strcmp(argv[i], "get") == 0) {
-        setB = false;
-        configArg = argv[i];
-      } else {
-        vec.push_back(argv[i]);
-      }
-    }
+    getConfigArg(argc, argv, setB, configArg, vec);
 
     if (vec.empty() || configArg.empty()) {
       std::cerr << "Error: Invalid config command format" << std::endl;
@@ -214,74 +177,152 @@ int main(int argc, char *argv[]) {
         return 1;
       } else {
         if (!config[5].present)
-          return system((std::string(argv[0]) + " source").c_str());
+          return sourceConfig(), 0;
       }
     } else
       std::cout << js.getJson(vec) << std::endl;
     return 0;
 
   } else if (command == "arch-install") {
-    // Loop through all of the lnes in the lines of the file arch-packages
-
-    std::string packagesToInstall = "";
-
-    std::string HOSHIMI_HOME;
-
-    // Safely get HOME environment variable
-    const char *home_env = getenv("HOME");
-    if (!home_env) {
-      std::cerr << "HOME environment variable not set" << std::endl;
-      return 1;
-    }
-    const std::string HOME = home_env;
-
-    // Check XDG_DATA_HOME
-    const char *xdg_data_home = getenv("XDG_DATA_HOME");
-    if (xdg_data_home && fs::exists(xdg_data_home)) {
-      HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
-    } else {
-      HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
-    }
-
-    std::ifstream f(HOSHIMI_HOME + "/archpackages.txt");
-
-    if (!f.is_open()) {
-      std::cerr << "Error opening the file!";
-      return 3;
-    }
-
-    // Add them to a single linie string
-
-    std::string s;
-    while (getline(f, s)) {
-      packagesToInstall += s + " ";
-      if (config[0].present)
-        std::cout << "Going to install: " << s << std::endl;
-    }
-
-    f.close();
-
-    // Install the packages the packages
-    system(("paru -S " + packagesToInstall).c_str());
+    bool retFlag;
+    int retVal = archInstall(config, retFlag);
+    if (retFlag)
+      return retVal;
 
   } else if (command == "restart") {
-    if (!config[5].present)
-      system((std::string(argv[0]) + " source").c_str());
-
-    GhosttyWriter *gs = new GhosttyWriter();
-    gs->reloadGhostty();
-    delete gs;
-
-    system("killall qs; \n "
-           " qs > /dev/null 2>&1 &");
-    std::cout << "Hoshimi restarted" << std::endl;
+    restart(config, argv);
 
   } else if (command == "version") {
     std::cout << "hoshimi v" << HOSHIMI_VERSION << std::endl;
     if (config[0].present) {
       std::cout << "Released on " << HOSHIMI_RELEASE_DATE << std::endl;
     }
+  }  else if (command == "help" || config[2].present) {
+    print_help(argv[0], config);
+  } else {
+    HERR("main") << "Unknown command: " << command << "Use '" << argv[0] << " help' to see available commands." << std::endl;
+    return 1;
+  }
+}
+
+void sourceConfig() {
+  GhosttyWriter *gs = new GhosttyWriter();
+  gs->writeConfig();
+  delete gs;
+  AlacrittyWriter *as = new AlacrittyWriter();
+  as->writeConfig();
+  delete as;
+  FootWriter *fs = new FootWriter();
+  fs->writeConfig();
+  delete fs;
+
+  QuickshellWriter *qs = new QuickshellWriter();
+  qs->writeColors();
+  qs->writeShell();
+  delete qs;
+}
+
+void getConfigArg(int argc, char *argv[], bool &setB, std::string &configArg, std::vector<std::string> &vec) {
+  // Process arguments until we find "set"
+  for (int i = 2; i < argc; ++i) {
+    if (strcmp(argv[i], "set") == 0) {
+      setB = true;
+      if (i + 1 < argc) {
+        configArg = argv[i + 1];
+        break;
+      } else {
+        std::cerr << "No value after set" << std::endl;
+      }
+    } else if (strcmp(argv[i], "get") == 0) {
+      setB = false;
+      configArg = argv[i];
+    } else {
+      vec.push_back(argv[i]);
+    }
+  }
+}
+
+void getPackageInfo(int argc, std::vector<Flag> &config, char *argv[]) {
+  for (int i = 2; i < argc; ++i) {
+    if (argc == 2)
+      break;
+    int packagesArgument, noPackagesArgument;
+
+    for (size_t j = 0; j < config.size(); ++j) {
+      if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {
+        config[j].present = !config[j].present;
+        if (j == 3)
+          packagesArgument = ++i;
+        else if (j == 4)
+          noPackagesArgument = ++i;
+      }
+    }
+
+    if (i == packagesArgument) {
+      boost::split(packages, argv[i], boost::is_any_of(","), boost::token_compress_on);
+    } else if (i == noPackagesArgument) {
+      boost::split(notPackages, argv[i], boost::is_any_of(","), boost::token_compress_on);
+    }
+  }
+}
+
+int archInstall(std::vector<Flag> &config, bool &retFlag) {
+  retFlag = true;
+  // Loop through all of the lnes in the lines of the file arch-packages
+
+  std::string packagesToInstall = "";
+
+  std::string HOSHIMI_HOME;
+
+  // Safely get HOME environment variable
+  const char *home_env = getenv("HOME");
+  if (!home_env) {
+    std::cerr << "HOME environment variable not set" << std::endl;
+    return 1;
+  }
+  const std::string HOME = home_env;
+
+  // Check XDG_DATA_HOME
+  const char *xdg_data_home = getenv("XDG_DATA_HOME");
+  if (xdg_data_home && fs::exists(xdg_data_home)) {
+    HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
+  } else {
+    HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
   }
 
-  return 0;
+  std::ifstream f(HOSHIMI_HOME + "/archpackages.txt");
+
+  if (!f.is_open()) {
+    std::cerr << "Error opening the file!";
+    return 3;
+  }
+
+  // Add them to a single linie string
+
+  std::string s;
+  while (getline(f, s)) {
+    packagesToInstall += s + " ";
+    if (config[0].present)
+      std::cout << "Going to install: " << s << std::endl;
+  }
+
+  f.close();
+
+  // Install the packages the packages
+  system(("paru -S " + packagesToInstall).c_str());
+  retFlag = false;
+  return {};
+}
+
+void restart(std::vector<Flag> &config, char *argv[]) {
+  if (!config[5].present)
+    sourceConfig();
+
+  GhosttyWriter *gs = new GhosttyWriter();
+  gs->reloadGhostty();
+  delete gs;
+
+  system("killall qs; \n "
+         " qs > /dev/null 2>&1 &");
+  HLOG("main") << "Hoshimi restarted" << std::endl;
 }

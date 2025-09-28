@@ -12,8 +12,8 @@ set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
 project(hoshimi)
 
-set(HOSHIMI_VERSION "0.2.6")
-set(HOSHIMI_RELEASE_DATE "27th September")
+set(HOSHIMI_VERSION "0.2.7")
+set(HOSHIMI_RELEASE_DATE "28th September")
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"

@@ -2,6 +2,11 @@
 
 #include "headers.hpp"
 
+// Logging helpers: use like `HLOG("Install") << "Found " << n << " files" << std::endl;`
+#define HLOG(tag) std::cout << "\033[1;39m[LOG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+#define HERR(tag) std::cerr << "\033[1;31m[Error]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+#define HDBG(tag) std::cout << "\033[1;36m[DBG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+
 class Utils {
 public:
   struct winsize getTerminalSize() {
