@@ -84,7 +84,9 @@ public:
     return ss.str();
   }
 
-  bool operator==(const Color &other) const { return this->toHex() == other.toHex(); }
+  bool operator==(const Color &other) const {
+    return this->toHex() == other.toHex();
+  }
   bool operator!=(const Color &other) const { return !(*this == other); }
 };
 
