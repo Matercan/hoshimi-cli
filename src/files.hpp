@@ -381,6 +381,8 @@ public:
 
 class WriterBase {
 public:
+  std::string Contents() { return newContents; }
+
   WriterBase(fs::path writingFile) {
     file = writingFile;
 
@@ -424,7 +426,7 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
+      HERR("Config" + file.string()) << " File opening unsuccessful" << std::endl;
       return false;
     }
 
@@ -438,7 +440,7 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
+      HERR("Config" + file.string()) << " File opening unsuccessful" << std::endl;
       return;
     }
 
@@ -504,6 +506,28 @@ public:
 
     newContents = updated_contents;
   }
+  void appendBeforeLine(const std::string &text, const int &line) {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updated_contents;
+    int current_line = 0;
+
+    while (std::getline(stream, line_content)) {
+      if (current_line == line) {
+        updated_contents += text + "\n";
+      }
+      updated_contents += line_content + "\n";
+      current_line++;
+    }
+
+    // If the specified line is beyond the current number of lines, append at the end
+    if (line >= current_line) {
+      updated_contents += text + "\n";
+    }
+
+    newContents = updated_contents;
+  }
+
   void writeLine(const std::string &text, const int &line) {
     std::istringstream stream(newContents);
     std::string line_content;
@@ -544,22 +568,20 @@ public:
             updatedContents += line + "\n";
             continue;
           }
-          if (boost::algorithm::contains(line, "//")) {
-            updatedContents += line + "\n";
-            continue;
-          }
-          if (boost::algorithm::contains(line, "root")) {
-            updatedContents += line + "\n";
-            continue;
-          }
 
           std::string newLine = "";
           std::vector<std::string> split;
 
           boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_on);
+            // In case there is a case like paletteColor1 and paletteColor10
+          if (split[0].find(key) + key.size() != split[0].size()) {
+            updatedContents += line + "\n";
+            continue;
+          }
 
           newLine += split[0] + ": " + value;
           updatedContents += newLine + "\n";
+          continue;
         } else {
           updatedContents += line + "\n";
         }
@@ -591,7 +613,7 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
-      HERR("Config " + file.string())  << " Value of " << key << " not changed." << std::endl;
+      HERR("Config " + file.string()) << " Value of " << key << " not changed." << std::endl;
     return exit_code;
   }
 
@@ -624,6 +646,10 @@ public:
   }
 
   bool writeColors() {
+    if (!files.isModifiable(colorsWriter->getFile())) {
+      HERR("Config " + colorsWriter->getFile().string()) << "File not modifiable by Hoshimi, skipping." << std::endl;
+      colorsWriter->appendBeforeLine("// File not modifiable by Hoshimi, skipping.\n", 0);
+    }
     bool exitCode = true;
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
