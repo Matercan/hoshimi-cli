@@ -24,15 +24,13 @@ jobs:
         extensions: 'h,hpp,c,cpp,cc,cxx'
         clangFormatVersion: 20
         inplace: true
+        style: llvm
 
     - name: Check for changes
       id: verify-changed-files
       run: |
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "changed=true" >> $GITHUB_OUTPUT
-        else
-          echo "changed=false" >> $GITHUB_OUTPUT
-        fi
+        if [ -n "$(git status --porcelain)" ]; then echo "changed=true" >> $GITHUB_OUTPUT
+        else echo "changed=false" >> $GITHUB_OUTPUT fi
 
     - name: Commit changes
       if: steps.verify-changed-files.outputs.changed == 'true'
@@ -42,5 +40,5 @@ jobs:
         author_email: actions@github.com
         committer_name: GitHub Actions
         committer_email: actions@github.com
-        message: 'style: apply clang-format'
+        message: 'Update Internal: apply clang-format'
         add: '.'

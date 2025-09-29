@@ -558,10 +558,7 @@ public:
 
           boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_on);
 
-          newLine += split[0];
-          newLine += ": \"";
-          newLine += value + "\"";
-
+          newLine += split[0] + ": " + value;
           updatedContents += newLine + "\n";
         } else {
           updatedContents += line + "\n";
@@ -594,7 +591,7 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
-      HERR("Config") << file.string() << " Value of " << key << " not changed." << std::endl;
+      HERR("Config " + file.string())  << " Value of " << key << " not changed." << std::endl;
     return exit_code;
   }
 
@@ -630,14 +627,13 @@ public:
     bool exitCode = true;
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
-      colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex());
+      colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex(Color::FLAGS::WQUOT));
     }
-    colorsWriter->replaceWithChecking("backgroundColor", colors.backgroundColor.toHex());
-    colorsWriter->replaceWithChecking("foregroundColor", colors.foregroundColor.toHex());
+    colorsWriter->replaceWithChecking("backgroundColor", colors.backgroundColor.toHex(Color::FLAGS::WQUOT));
+    colorsWriter->replaceWithChecking("foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT));
 
     for (size_t i = 2; i < colors.main.size(); ++i) {
-      auto it = find(colors.palette.begin(), colors.palette.end(), colors.main[i]) - colors.palette.begin();
-      colorsWriter->replaceValue(Utils().COLOR_NAMES[i], "paletteColor" + std::to_string(it),
+      colorsWriter->replaceValue(Utils().COLOR_NAMES[i], colors.main[i].toHex(Color::FLAGS::WQUOT),
                                  nullptr); // Don't check this one because it will be similar each run
     }
 
@@ -655,7 +651,7 @@ public:
   bool writeShell() {
     bool exitCode = true;
 
-    if (!shellWriter->replaceWithChecking("wallpaper", config.wallpaper)) {
+    if (!shellWriter->replaceWithChecking("wallpaper", "\"" + config.wallpaper.string() + "\"")) {
       exitCode = false;
     }
 
