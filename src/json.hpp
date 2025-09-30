@@ -89,7 +89,7 @@ private:
 public:
   struct Config {
     fs::path wallpaper;
-    char **sourceCommands = nullptr;
+    char** commands = nullptr;
   };
 
   ShellHandler() {
@@ -159,6 +159,22 @@ public:
       config.wallpaper = ""; // or set a default wallpaper
     }
 
+    // Get commands array
+    cJSON *commandsJson = getObj(THEME_CONFIG_JSON, "commands");
+    if (!cJSON_IsArray(commandsJson)) {
+      HERR("JSON " + THEME_CONFIG_FILE.string())
+          << "Warning: 'commands' key missing or not an array in main config."
+          << std::endl;
+      return config;
+    }
+    for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
+      if (cJSON_IsString(cmd) && cmd->valuestring) {
+        config.commands =
+            (char **)realloc(config.commands, sizeof(char *) * (1 + 1));
+        config.commands[0] = strdup(cmd->valuestring);
+        config.commands[1] = NULL; // Null-terminate the array
+      }
+    }
     return config;
   }
 };

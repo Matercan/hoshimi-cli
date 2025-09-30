@@ -202,6 +202,13 @@ int main(int argc, char *argv[]) {
     } else {
       sourceConfig();
     }
+    auto shellConfig = ShellHandler().getConfig();
+    for (int i = 0; shellConfig.commands && shellConfig.commands[i]; ++i) {
+      if (system(shellConfig.commands[i]) != 0) {
+        HERR("main") << "Failed to run command: " << shellConfig.commands[i]
+                     << std::endl;
+      }
+    }
 
   } else if (command == "config") {
     if (config[2].present) {

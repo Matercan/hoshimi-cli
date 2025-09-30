@@ -749,12 +749,10 @@ public:
           "// File not modifiable by Hoshimi, skipping.\n", 0);
     }
     bool exitCode = true;
-    colorsWriter->write("temp1.qml");
     if (colors.backgroundColor.light())
       colorsWriter->replaceWithChecking("light", "true");
     else
       colorsWriter->replaceWithChecking("light", "false");
-    colorsWriter->write("temp2.qml");
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
       colorsWriter->replaceWithChecking(
