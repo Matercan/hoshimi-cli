@@ -89,7 +89,7 @@ private:
 public:
   struct Config {
     fs::path wallpaper;
-    char** commands = nullptr;
+    char **commands = nullptr;
   };
 
   ShellHandler() {
