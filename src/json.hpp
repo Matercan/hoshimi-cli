@@ -89,6 +89,7 @@ private:
 public:
   struct Config {
     fs::path wallpaper;
+    char** sourceCommands = nullptr;
   };
 
   ShellHandler() {
@@ -99,6 +100,7 @@ public:
   Config getConfig() {
     Config config;
     // Safe accessors
+
     auto getObj = [&](cJSON *parent, const char *key) -> cJSON * {
       if (!parent)
         return nullptr;

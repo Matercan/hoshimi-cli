@@ -23,7 +23,8 @@ jobs:
           release_name: Release ${{ github.ref }}
           body: |
             Changes in this Release
-            - Improved performance compared to previous releases
-            - More robust writers especialy for foot.
+            - General code improvements especially with variable names
+            - Dumping writer's contents.
+            - Most improtantly, added the ability to run commands after sourcing the config
           draft: false
           prerelease: true

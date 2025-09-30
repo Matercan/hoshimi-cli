@@ -88,7 +88,9 @@ public:
   bool operator!=(const Color &other) const { return !(*this == other); }
   bool operator>(const Color other) const { return (this->r + this->g + this->b) > (other.r + other.g + other.b); }
   bool operator<(const Color other) const { return (this->r + this->g + this->b) < (other.r + other.g + other.b); }
-  bool light() { return *this > Color("#888888"); }
+  bool light() { 
+    return (this->r + this->g + this->b) > 384; 
+  }
 };
 
 class Colorscheme {

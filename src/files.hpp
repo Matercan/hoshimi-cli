@@ -1,13 +1,5 @@
 #include "json.hpp"
 #include "utils/utils.hpp"
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/constants.hpp>
-#include <boost/algorithm/string/find.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/range/mutable_iterator.hpp>
-#include <cstddef>
-#include <iterator>
-#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -382,6 +374,13 @@ public:
 };
 
 class WriterBase {
+private:
+  fs::path file;
+  std::string newContents;
+  std::string fileContents;
+  FileType filetype;
+
+
 public:
   std::string Contents() { return newContents; }
 
@@ -424,7 +423,7 @@ public:
     filetype = ft;
   }
 
-  bool writeToFile() {
+  bool write() {
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
@@ -436,6 +435,19 @@ public:
 
     o.close();
     return true;
+  }
+  void write(const std::string &filePath) {
+    std::ofstream o(filePath);
+
+    if (!o.is_open()) {
+      HERR("Config" + filePath) << " File opening unsuccessful" << std::endl;
+      return;
+    }
+
+    o << newContents;
+
+    o.close();
+    return;
   }
 
   void revert() {
@@ -483,6 +495,7 @@ public:
 
     newContents = updated_contents;
   }
+
 
   // Append contents to file
   void append(std::string text) { newContents += text; }
@@ -565,10 +578,24 @@ public:
     std::string line;
     std::istringstream newContentsStream(newContents);
 
-    if (*fileType == FileType::QS) {
+    HDBG("Quickshell") << "Value: " << value << std::endl;
+    HDBG("Quickshell") << "Key: " << key << std::endl;    
 
+    if (*fileType == FileType::QS) {
+      HDBG("Quickshell") << key << std::endl;
+      bool written = false;
       while (getline(newContentsStream, line)) {
+        if (written) {
+          updatedContents += line + "\n";
+          continue;
+        } else if (line.find(key) != std::string::npos) {
+          HDBG("Quickshell") << "STD found key: " << key << std::endl;
+        }
         if (boost::algorithm::contains(line, key)) {
+          HDBG("Quickshell") << "Boost found key: " << key << std::endl;
+        }
+
+        if (boost::algorithm::contains(line, key + ":")) {
           if (line.find(":") == std::string::npos) {
             updatedContents += line + "\n";
             continue;
@@ -578,14 +605,10 @@ public:
           std::vector<std::string> split;
 
           boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_on);
-          // In case there is a case like paletteColor1 and paletteColor10
-          if (split[0].find(key) + key.size() != split[0].size()) {
-            updatedContents += line + "\n";
-            continue;
-          }
 
           newLine += split[0] + ": " + value;
           updatedContents += newLine + "\n";
+          written = true;
           continue;
         } else {
           updatedContents += line + "\n";
@@ -616,6 +639,7 @@ public:
   }
 
   bool replaceWithChecking(std::string key, std::string value) {
+    HDBG("Writer") << key << std::endl;
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
       HERR("Config " + file.string()) << " Value of " << key << " not changed." << std::endl;
@@ -627,12 +651,6 @@ public:
       exitCode = false;
     }
   }
-
-private:
-  fs::path file;
-  std::string newContents;
-  std::string fileContents;
-  FileType filetype;
 };
 
 class QuickshellWriter {
@@ -662,9 +680,17 @@ public:
       colorsWriter->appendBeforeLine("// File not modifiable by Hoshimi, skipping.\n", 0);
     }
     bool exitCode = true;
+    colorsWriter->write("temp1.qml");
+    if (colors.backgroundColor.light())
+      colorsWriter->replaceWithChecking("light", "true");
+    else 
+      colorsWriter->replaceWithChecking("light", "false");
+    HDBG("Config " + colorsWriter->getFile().string())
+        << "Background color is " << (colors.backgroundColor.light() ? "light" : "dark") << "." << std::endl;
+    colorsWriter->write("temp2.qml");
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
-      colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex(Color::FLAGS::WQUOT), exitCode);
+      colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex(Color::FLAGS::WQUOT));
     }
     colorsWriter->replaceWithChecking("backgroundColor", colors.backgroundColor.toHex(Color::FLAGS::WQUOT), exitCode);
     colorsWriter->replaceWithChecking("foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT), exitCode);
@@ -673,7 +699,7 @@ public:
       colorsWriter->replaceWithChecking(Utils().COLOR_NAMES[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
     }
 
-    if (!colorsWriter->writeToFile()) {
+    if (!colorsWriter->write()) {
       exitCode = false;
       std::cerr << "Error writing to file: " << colorsWriter->getFile().filename() << std::endl;
     }
@@ -687,15 +713,22 @@ public:
   bool writeShell() {
     bool exitCode = true;
 
+    HDBG("Config") << shellWriter->Contents() << std::endl;
     if (!shellWriter->replaceWithChecking("wallpaper", "\"" + config.wallpaper.string() + "\"")) {
       exitCode = false;
     }
 
-    if (!shellWriter->writeToFile())
+    if (!shellWriter->write())
       exitCode = false;
 
     if (!exitCode)
+    {
+      HDBG("Config " + shellWriter->getFile().string()) << "Reverting changes." << std::endl;
+      HDBG("Config") << shellWriter->Contents() << std::endl;
       shellWriter->revert();
+      HDBG("Config") << shellWriter->Contents() << std::endl;
+    }
+      
 
     return exitCode;
   }
@@ -754,7 +787,7 @@ public:
       writer.replaceValue("palette = " + std::to_string(i), colors.palette[i].toHex(), nullptr);
     }
 
-    if (!writer.writeToFile()) {
+    if (!writer.write()) {
       exitCode = false;
 
       HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
@@ -802,7 +835,7 @@ public:
     }
     writer.append("\n");
 
-    if (!writer.writeToFile()) {
+    if (!writer.write()) {
       exitCode = false;
       HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
     }
@@ -845,7 +878,7 @@ public:
       writer.replaceValue("color" + std::to_string(i), colors.palette[i].toHex(), nullptr);
     }
 
-    if (!writer.writeToFile()) {
+    if (!writer.write()) {
       exitCode = false;
       HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
     }
@@ -910,7 +943,7 @@ public:
     writer.append("\n");
 
     // Write to file
-    bool retVal = writer.writeToFile();
+    bool retVal = writer.write();
 
     if (!retVal) {
       HERR("Config " + path.string()) << "Error writing to file." << std::endl;
