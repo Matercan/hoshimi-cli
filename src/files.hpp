@@ -646,23 +646,13 @@ public:
     std::string line;
     std::istringstream newContentsStream(newContents);
 
-    HDBG("Quickshell") << "Value: " << value << std::endl;
-    HDBG("Quickshell") << "Key: " << key << std::endl;
-
     if (*fileType == FileType::QS) {
-      HDBG("Quickshell") << key << std::endl;
       bool written = false;
       while (getline(newContentsStream, line)) {
         if (written) {
           updatedContents += line + "\n";
           continue;
-        } else if (line.find(key) != std::string::npos) {
-          HDBG("Quickshell") << "STD found key: " << key << std::endl;
         }
-        if (boost::algorithm::contains(line, key)) {
-          HDBG("Quickshell") << "Boost found key: " << key << std::endl;
-        }
-
         if (boost::algorithm::contains(line, key + ":")) {
           if (line.find(":") == std::string::npos) {
             updatedContents += line + "\n";
@@ -709,7 +699,6 @@ public:
   }
 
   bool replaceWithChecking(std::string key, std::string value) {
-    HDBG("Writer") << key << std::endl;
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
       HERR("Config " + file.string())
@@ -765,10 +754,6 @@ public:
       colorsWriter->replaceWithChecking("light", "true");
     else
       colorsWriter->replaceWithChecking("light", "false");
-    HDBG("Config " + colorsWriter->getFile().string())
-        << "Background color is "
-        << (colors.backgroundColor.light() ? "light" : "dark") << "."
-        << std::endl;
     colorsWriter->write("temp2.qml");
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
@@ -804,7 +789,6 @@ public:
   bool writeShell() {
     bool exitCode = true;
 
-    HDBG("Config") << shellWriter->Contents() << std::endl;
     if (!shellWriter->replaceWithChecking(
             "wallpaper", "\"" + config.wallpaper.string() + "\"")) {
       exitCode = false;
@@ -813,13 +797,9 @@ public:
     if (!shellWriter->write())
       exitCode = false;
 
-    if (!exitCode) {
-      HDBG("Config " + shellWriter->getFile().string())
-          << "Reverting changes." << std::endl;
-      HDBG("Config") << shellWriter->Contents() << std::endl;
+    if (!exitCode) 
       shellWriter->revert();
-      HDBG("Config") << shellWriter->Contents() << std::endl;
-    }
+    
 
     return exitCode;
   }
