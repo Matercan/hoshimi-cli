@@ -11,6 +11,10 @@
       "description": "Using different colors than the colors in this theme",
       "default": "this"
     },
+    "commands": {
+      "type": "array",
+      "description": "An array of commands to run after sourcing this config"
+    },
     "bar": {
       "type": "object",
       "properties": {
