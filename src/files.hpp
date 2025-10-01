@@ -795,9 +795,8 @@ public:
     if (!shellWriter->write())
       exitCode = false;
 
-    if (!exitCode) 
+    if (!exitCode)
       shellWriter->revert();
-    
 
     return exitCode;
   }
