@@ -21,8 +21,8 @@ cd hoshimi-cli
 
 # configure
 cmake -S . -B build -G Ninja \
-  -DCMAKE_BUILD_TYPE:STRING=Debug \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE \
+  -DCMAKE_BUILD_TYPE:STRING=Release \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=FALSE \
   -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang \
   -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++ \
   --no-warn-unused-cli
@@ -178,3 +178,4 @@ The themes are located in ~/.config/hoshimi/themes/ and can be pointed to in the
 ```
 
 </details>
+
