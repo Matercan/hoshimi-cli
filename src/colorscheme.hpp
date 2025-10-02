@@ -88,10 +88,16 @@ public:
     return ss.str();
   }
 
-  bool operator==(const Color &other) const { return this->toHex() == other.toHex(); }
+  bool operator==(const Color &other) const {
+    return this->toHex() == other.toHex();
+  }
   bool operator!=(const Color &other) const { return !(*this == other); }
-  bool operator>(const Color other) const { return (this->r + this->g + this->b) > (other.r + other.g + other.b); }
-  bool operator<(const Color other) const { return (this->r + this->g + this->b) < (other.r + other.g + other.b); }
+  bool operator>(const Color other) const {
+    return (this->r + this->g + this->b) > (other.r + other.g + other.b);
+  }
+  bool operator<(const Color other) const {
+    return (this->r + this->g + this->b) < (other.r + other.g + other.b);
+  }
   bool light() { return (this->r + this->g + this->b) > 384; }
 };
 
