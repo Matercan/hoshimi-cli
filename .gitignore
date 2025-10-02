@@ -20,3 +20,4 @@ flamegraph*
 # generated files
 **backup/
 temp*
+*.png

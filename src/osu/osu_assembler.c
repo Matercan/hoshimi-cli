@@ -69,15 +69,19 @@ int main() {
 
   // Load base images
   int hw, hh, hc;
-  printf("%s\n", strcat(osuSkin, "hitcircle.png"));
-  unsigned char *hitcircle = stbi_load(strcat(osuSkin, "hitcircle.png"), &hw, &hh, &hc, 4);
+  char* osuPath = load_config()->osuSkin;
+  char* osuPathCopy = strdup(osuPath); // Duplicate to avoid modifying original
+  char* hitCirclePath = strcat(osuPath, "hitcircle.png");
+  char* circleOverlayPath = strcat(osuPathCopy, "hitcircleoverlay.png");
+
+  unsigned char *hitcircle = stbi_load(hitCirclePath, &hw, &hh, &hc, 4);
   if (!hitcircle) {
     printf("Failed to load %s\n", hitCirclePath);
     return 1;
   }
 
   int ow, oh, oc;
-  unsigned char *overlay = stbi_load(strcat(osuSkin, "hitcircleoverlay.png"), &ow, &oh, &oc, 4);
+  unsigned char *overlay = stbi_load(circleOverlayPath, &ow, &oh, &oc, 4);
   if (!overlay) {
     printf("Failed to load %s\n", circleOverlayPath);
     stbi_image_free(hitcircle);
