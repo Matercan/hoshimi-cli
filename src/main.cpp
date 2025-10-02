@@ -1,7 +1,5 @@
-
 #include "files.hpp"
 #include "version.h"
-#include <vector>
 
 namespace fs = std::filesystem;
 std::vector<std::string> packages;

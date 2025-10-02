@@ -1,15 +1,17 @@
 #pragma once
 
-#include "headers.hpp"
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <vector>
 
 // Logging helpers: use like `HLOG("Install") << "Found " << n << " files" <<
 // std::endl;`
-#define HLOG(tag)                                                              \
-  std::cout << "\033[1;39m[LOG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
-#define HERR(tag)                                                              \
-  std::cerr << "\033[1;31m[Error]\033[0m " << "\033[2m[" << tag << "]\033[0m "
-#define HDBG(tag)                                                              \
-  std::cout << "\033[1;36m[DBG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+#define HLOG(tag) std::cout << "\033[1;39m[LOG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+#define HERR(tag) std::cerr << "\033[1;31m[Error]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+#define HDBG(tag) std::cout << "\033[1;36m[DBG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
 
 class Utils {
 public:
@@ -28,9 +30,7 @@ public:
 
     // Calculate the text that will appear after the progress bar
     std::ostringstream text_stream;
-    text_stream << "] " << std::fixed << std::setprecision(1)
-                << (progress * 100.0f) << "% (" << current << "/" << total
-                << ")";
+    text_stream << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f) << "% (" << current << "/" << total << ")";
     std::string suffix_text = text_stream.str();
 
     // Calculate space needed for: "[" + suffix_text
@@ -62,7 +62,6 @@ public:
     fflush(stdout); // Force flush the output
   }
 
-  std::vector<std::string> COLOR_NAMES = {
-      "backgroundColor", "foregroundColor", "selectedColor", "activeColor",
-      "iconColor",       "errorColor",      "passwordColor", "borderColor"};
+  std::vector<std::string> COLOR_NAMES = {"backgroundColor", "foregroundColor", "selectedColor", "activeColor",
+                                          "iconColor",       "errorColor",      "passwordColor", "borderColor"};
 };

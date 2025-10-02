@@ -1,4 +1,8 @@
-#include "utils/headers.hpp"
+#include <inttypes.h>
+#include <iomanip>
+#include <ios>
+#include <string>
+#include <vector>
 
 class Color {
 public:
@@ -84,16 +88,10 @@ public:
     return ss.str();
   }
 
-  bool operator==(const Color &other) const {
-    return this->toHex() == other.toHex();
-  }
+  bool operator==(const Color &other) const { return this->toHex() == other.toHex(); }
   bool operator!=(const Color &other) const { return !(*this == other); }
-  bool operator>(const Color other) const {
-    return (this->r + this->g + this->b) > (other.r + other.g + other.b);
-  }
-  bool operator<(const Color other) const {
-    return (this->r + this->g + this->b) < (other.r + other.g + other.b);
-  }
+  bool operator>(const Color other) const { return (this->r + this->g + this->b) > (other.r + other.g + other.b); }
+  bool operator<(const Color other) const { return (this->r + this->g + this->b) < (other.r + other.g + other.b); }
   bool light() { return (this->r + this->g + this->b) > 384; }
 };
 

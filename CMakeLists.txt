@@ -3,12 +3,25 @@ cmake_minimum_required(VERSION 3.31.6)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+
+
+set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
+set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
+
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_RUNTIME OFF)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -s")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
 if (WIN32)
     message("haha, you stinky loser - this doesn't work on windows")
 endif (WIN32)
 
-set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
-set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
 project(hoshimi)
 
@@ -21,12 +34,10 @@ configure_file(
     @ONLY
 )
 
+
 find_package(Boost REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
-
-set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
-set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
 add_executable(hoshimi src/main.cpp)
 
@@ -40,6 +51,7 @@ target_compile_options(hoshimi PRIVATE
 )
 target_include_directories(hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
-target_link_libraries(hoshimi PRIVATE Boost::boost cjson)
+target_link_libraries(hoshimi PRIVATE cjson)
+target_include_directories(hoshimi PRIVATE Boost::headers)
 target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
 target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
