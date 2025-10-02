@@ -16,18 +16,21 @@ public:
   cJSON *getJsonFromFile(const char *filePath) {
     std::ifstream input(filePath, std::ios::binary);
     if (!input) {
-      HERR("JSON") << "Unable to open file for reading: " << filePath << "." << std::endl;
+      HERR("JSON") << "Unable to open file for reading: " << filePath << "."
+                   << std::endl;
       return nullptr;
     }
 
-    std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    std::string content((std::istreambuf_iterator<char>(input)),
+                        std::istreambuf_iterator<char>());
     input.close();
 
     cJSON *json = cJSON_Parse(content.c_str());
     if (json == NULL) {
       const char *error_ptr = cJSON_GetErrorPtr();
       if (error_ptr != NULL) {
-        HERR("JSON") << "Error parsing JSON at: " << &error_ptr << "." << std::endl;
+        HERR("JSON") << "Error parsing JSON at: " << &error_ptr << "."
+                     << std::endl;
       }
       return nullptr;
     }
@@ -40,7 +43,8 @@ public:
     const char *xdg_config_home = getenv("XDG_CONFIG_HOME");
     const char *home = getenv("HOME");
     if (xdg_config_home)
-      CONFIG_DIRECTORY_PATH = fs::path((std::string)xdg_config_home + "/hoshimi/");
+      CONFIG_DIRECTORY_PATH =
+          fs::path((std::string)xdg_config_home + "/hoshimi/");
     else
       CONFIG_DIRECTORY_PATH = fs::path((std::string)home + "/.config/hoshimi/");
     THEMES_PATH = CONFIG_DIRECTORY_PATH / "themes/";
@@ -62,7 +66,9 @@ public:
 
     std::string themeName = getStringOrEmpty(MAIN_CONFIG_JSON, "config");
     if (themeName.empty()) {
-      HERR("json " + MAIN_CONFIG_PATH.string()) << "Warning: 'config' key missing or not a string in main config." << std::endl;
+      HERR("json " + MAIN_CONFIG_PATH.string())
+          << "Warning: 'config' key missing or not a string in main config."
+          << std::endl;
       themeName = "default"; // fallback theme name
     }
 
@@ -120,13 +126,16 @@ public:
     std::string wallpaperDirectory = getString(globals, "wallpaperDirectory");
 
     // Helper function to check if file exists
-    auto fileExists = [](const std::string &path) { return fs::exists(path) && fs::is_regular_file(path); };
+    auto fileExists = [](const std::string &path) {
+      return fs::exists(path) && fs::is_regular_file(path);
+    };
 
     // Try different wallpaper paths in order of preference
     std::vector<std::string> possiblePaths = {
-        wallpaperDirectory + wallpaper,                          // wallpaperDirectory + filename
-        "~/.local/share/hoshimi/assets/wallpapers/" + wallpaper, // default hoshimi assets
-        wallpaper                                                // absolute path or relative to current dir
+        wallpaperDirectory + wallpaper, // wallpaperDirectory + filename
+        "~/.local/share/hoshimi/assets/wallpapers/" +
+            wallpaper, // default hoshimi assets
+        wallpaper      // absolute path or relative to current dir
     };
 
     // Expand ~ to home directory
@@ -160,12 +169,15 @@ public:
     // Get commands array
     cJSON *commandsJson = getObj(THEME_CONFIG_JSON, "commands");
     if (!cJSON_IsArray(commandsJson)) {
-      HERR("JSON " + THEME_CONFIG_FILE.string()) << "Warning: 'commands' key missing or not an array in main config." << std::endl;
+      HERR("JSON " + THEME_CONFIG_FILE.string())
+          << "Warning: 'commands' key missing or not an array in main config."
+          << std::endl;
       return config;
     }
     for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
       if (cJSON_IsString(cmd) && cmd->valuestring) {
-        config.commands = (char **)realloc(config.commands, sizeof(char *) * (1 + 1));
+        config.commands =
+            (char **)realloc(config.commands, sizeof(char *) * (1 + 1));
         config.commands[0] = strdup(cmd->valuestring);
         config.commands[1] = NULL; // Null-terminate the array
       }
@@ -250,7 +262,8 @@ public:
     }
 
     auto inBounds = [&](int idx) { return idx >= 0 && idx < 16; };
-    if (!inBounds(activeColorIdx) || !inBounds(selectedColorIdx) || !inBounds(iconColorIdx) || !inBounds(errorColorIdx) ||
+    if (!inBounds(activeColorIdx) || !inBounds(selectedColorIdx) ||
+        !inBounds(iconColorIdx) || !inBounds(errorColorIdx) ||
         !inBounds(passwordColorIdx) || !inBounds(borderColorIdx)) {
       throw std::runtime_error("Palette color index out of bounds");
     }
@@ -262,8 +275,10 @@ public:
     Color passwordColorValue = paletteColors[passwordColorIdx];
     Color borderColorValue = paletteColors[borderColorIdx];
 
-    Color mainColors[8] = {backgroundColor, foregroundColor, activeColorValue,   selectedColorValue,
-                           iconColorValue,  errorColorValue, passwordColorValue, borderColorValue};
+    Color mainColors[8] = {backgroundColor,    foregroundColor,
+                           activeColorValue,   selectedColorValue,
+                           iconColorValue,     errorColorValue,
+                           passwordColorValue, borderColorValue};
 
     return Colorscheme(mainColors, paletteColors);
   }

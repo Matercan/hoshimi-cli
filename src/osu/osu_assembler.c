@@ -16,7 +16,8 @@ void tint_image(unsigned char *img, int w, int h, ColorRGB tint) {
 }
 
 // Composite src onto dst with alpha blending
-void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx, int dy, int dst_w, int dst_h) {
+void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx,
+               int dy, int dst_w, int dst_h) {
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
       int dst_x = dx + x;
@@ -34,7 +35,10 @@ void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx, int
 
       if (out_a > 0) {
         for (int c = 0; c < 3; c++) {
-          dst[dst_idx + c] = (unsigned char)((src[src_idx + c] * src_a + dst[dst_idx + c] * dst_a * (1 - src_a)) / out_a);
+          dst[dst_idx + c] =
+              (unsigned char)((src[src_idx + c] * src_a +
+                               dst[dst_idx + c] * dst_a * (1 - src_a)) /
+                              out_a);
         }
         dst[dst_idx + 3] = (unsigned char)(out_a * 255);
       }
@@ -58,21 +62,26 @@ int main() {
     color_array[i] = colors->palette[i];
   }
 
-  const char *color_names[] = {"palette1", "palette2",  "palette3",  "palette4",  "palette5",  "palette6",  "palette7",  "palette8",
-                               "palette9", "palette10", "palette11", "palette12", "palette13", "palette14", "palette15", "palette16"};
+  const char *color_names[] = {
+      "palette1",  "palette2",  "palette3",  "palette4",
+      "palette5",  "palette6",  "palette7",  "palette8",
+      "palette9",  "palette10", "palette11", "palette12",
+      "palette13", "palette14", "palette15", "palette16"};
   int num_colors = 16;
 
   // Load base images
   int hw, hh, hc;
   printf("%s\n", strcat(osuSkin, "hitcircle.png"));
-  unsigned char *hitcircle = stbi_load(strcat(osuSkin, "hitcircle.png"), &hw, &hh, &hc, 4);
+  unsigned char *hitcircle =
+      stbi_load(strcat(osuSkin, "hitcircle.png"), &hw, &hh, &hc, 4);
   if (!hitcircle) {
     printf("Failed to load hitcircle.png\n");
     return 1;
   }
 
   int ow, oh, oc;
-  unsigned char *overlay = stbi_load(strcat(osuSkin, "hitcircleoverlay.png"), &ow, &oh, &oc, 4);
+  unsigned char *overlay =
+      stbi_load(strcat(osuSkin, "hitcircleoverlay.png"), &ow, &oh, &oc, 4);
   if (!overlay) {
     printf("Failed to load hitcircleoverlay.png\n");
     stbi_image_free(hitcircle);
