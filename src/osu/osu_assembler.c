@@ -54,8 +54,6 @@ int main() {
     return 1;
   }
 
-  char *osuSkin = load_config()->osuSkin;
-
   // Use the palette colors from your theme
   ColorRGB color_array[16];
   for (int i = 0; i < 16; i++) {
@@ -72,39 +70,55 @@ int main() {
   // Load base images
   int hw, hh, hc;
   printf("%s\n", strcat(osuSkin, "hitcircle.png"));
-  unsigned char *hitcircle =
-      stbi_load(strcat(osuSkin, "hitcircle.png"), &hw, &hh, &hc, 4);
+  unsigned char *hitcircle = stbi_load(strcat(osuSkin, "hitcircle.png"), &hw, &hh, &hc, 4);
   if (!hitcircle) {
-    printf("Failed to load hitcircle.png\n");
+    printf("Failed to load %s\n", hitCirclePath);
     return 1;
   }
 
   int ow, oh, oc;
-  unsigned char *overlay =
-      stbi_load(strcat(osuSkin, "hitcircleoverlay.png"), &ow, &oh, &oc, 4);
+  unsigned char *overlay = stbi_load(strcat(osuSkin, "hitcircleoverlay.png"), &ow, &oh, &oc, 4);
   if (!overlay) {
-    printf("Failed to load hitcircleoverlay.png\n");
+    printf("Failed to load %s\n", circleOverlayPath);
     stbi_image_free(hitcircle);
     return 1;
   }
 
-  // Load number sprites (0-9)
-  unsigned char *numbers[10];
-  int nw[10], nh[10];
-  for (int i = 0; i < 10; i++) {
-    char filename[32];
-    sprintf(filename, "default-%d.png", i);
+unsigned char *numbers[10];
+int nw[10], nh[10];
+
+// Load config once, not in loop
+Config* config = load_config();
+if (!config || !config->osuSkin) {
+    printf("Failed to load config or osuSkin path\n");
+    stbi_image_free(hitcircle);
+    stbi_image_free(overlay);
+    free_colorscheme(colors);
+    return 1;
+}
+
+for (int i = 0; i < 10; i++) {
+    // Build the full path properly
+    char filename[1024];
+    snprintf(filename, sizeof(filename), "%s/fonts/hitcircle/default-%d.png", config->osuSkin, i);
+    
+    printf("Loading: %s\n", filename);
+    
     int nc;
     numbers[i] = stbi_load(filename, &nw[i], &nh[i], &nc, 4);
     if (!numbers[i]) {
-      printf("Failed to load %s\n", filename);
-      stbi_image_free(hitcircle);
-      stbi_image_free(overlay);
-      for (int j = 0; j < i; j++)
-        stbi_image_free(numbers[j]);
-      return 1;
+        printf("Failed to load %s\n", filename);
+        printf("stbi_failure_reason: %s\n", stbi_failure_reason());
+        stbi_image_free(hitcircle);
+        stbi_image_free(overlay);
+        for (int j = 0; j < i; j++)
+            stbi_image_free(numbers[j]);
+        free_config(config);
+        free_colorscheme(colors);
+        return 1;
     }
-  }
+    printf("Loaded number %d: %dx%d\n", i, nw[i], nh[i]);
+}
 
   // Generate circles for each color and combo number 1-9
   for (int c = 0; c < num_colors; c++) {

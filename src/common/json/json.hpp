@@ -183,6 +183,11 @@ public:
       }
     }
     std::string osuPath = getString(globals, "osuSkin");
+    if (home) {
+      if (osuPath.find("~/", 0) == 0) {
+        osuPath = std::string(home) + osuPath.substr(1);
+      }
+    }
     config.osuSkin = osuPath;
 
     return config;
