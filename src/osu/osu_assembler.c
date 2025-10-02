@@ -16,8 +16,7 @@ void tint_image(unsigned char *img, int w, int h, ColorRGB tint) {
 }
 
 // Composite src onto dst with alpha blending
-void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx,
-               int dy, int dst_w, int dst_h) {
+void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx, int dy, int dst_w, int dst_h) {
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
       int dst_x = dx + x;
@@ -35,10 +34,7 @@ void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx,
 
       if (out_a > 0) {
         for (int c = 0; c < 3; c++) {
-          dst[dst_idx + c] =
-              (unsigned char)((src[src_idx + c] * src_a +
-                               dst[dst_idx + c] * dst_a * (1 - src_a)) /
-                              out_a);
+          dst[dst_idx + c] = (unsigned char)((src[src_idx + c] * src_a + dst[dst_idx + c] * dst_a * (1 - src_a)) / out_a);
         }
         dst[dst_idx + 3] = (unsigned char)(out_a * 255);
       }
@@ -60,19 +56,16 @@ int main() {
     color_array[i] = colors->palette[i];
   }
 
-  const char *color_names[] = {
-      "palette1",  "palette2",  "palette3",  "palette4",
-      "palette5",  "palette6",  "palette7",  "palette8",
-      "palette9",  "palette10", "palette11", "palette12",
-      "palette13", "palette14", "palette15", "palette16"};
+  const char *color_names[] = {"palette1", "palette2",  "palette3",  "palette4",  "palette5",  "palette6",  "palette7",  "palette8",
+                               "palette9", "palette10", "palette11", "palette12", "palette13", "palette14", "palette15", "palette16"};
   int num_colors = 16;
 
   // Load base images
   int hw, hh, hc;
-  char* osuPath = load_config()->osuSkin;
-  char* osuPathCopy = strdup(osuPath); // Duplicate to avoid modifying original
-  char* hitCirclePath = strcat(osuPath, "hitcircle.png");
-  char* circleOverlayPath = strcat(osuPathCopy, "hitcircleoverlay.png");
+  char *osuPath = load_config()->osuSkin;
+  char *osuPathCopy = strdup(osuPath); // Duplicate to avoid modifying original
+  char *hitCirclePath = strcat(osuPath, "hitcircle.png");
+  char *circleOverlayPath = strcat(osuPathCopy, "hitcircleoverlay.png");
 
   unsigned char *hitcircle = stbi_load(hitCirclePath, &hw, &hh, &hc, 4);
   if (!hitcircle) {
@@ -88,41 +81,41 @@ int main() {
     return 1;
   }
 
-unsigned char *numbers[10];
-int nw[10], nh[10];
+  unsigned char *numbers[10];
+  int nw[10], nh[10];
 
-// Load config once, not in loop
-Config* config = load_config();
-if (!config || !config->osuSkin) {
+  // Load config once, not in loop
+  Config *config = load_config();
+  if (!config || !config->osuSkin) {
     printf("Failed to load config or osuSkin path\n");
     stbi_image_free(hitcircle);
     stbi_image_free(overlay);
     free_colorscheme(colors);
     return 1;
-}
+  }
 
-for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 10; i++) {
     // Build the full path properly
     char filename[1024];
     snprintf(filename, sizeof(filename), "%s/fonts/hitcircle/default-%d.png", config->osuSkin, i);
-    
+
     printf("Loading: %s\n", filename);
-    
+
     int nc;
     numbers[i] = stbi_load(filename, &nw[i], &nh[i], &nc, 4);
     if (!numbers[i]) {
-        printf("Failed to load %s\n", filename);
-        printf("stbi_failure_reason: %s\n", stbi_failure_reason());
-        stbi_image_free(hitcircle);
-        stbi_image_free(overlay);
-        for (int j = 0; j < i; j++)
-            stbi_image_free(numbers[j]);
-        free_config(config);
-        free_colorscheme(colors);
-        return 1;
+      printf("Failed to load %s\n", filename);
+      printf("stbi_failure_reason: %s\n", stbi_failure_reason());
+      stbi_image_free(hitcircle);
+      stbi_image_free(overlay);
+      for (int j = 0; j < i; j++)
+        stbi_image_free(numbers[j]);
+      free_config(config);
+      free_colorscheme(colors);
+      return 1;
     }
     printf("Loaded number %d: %dx%d\n", i, nw[i], nh[i]);
-}
+  }
 
   // Generate circles for each color and combo number 1-9
   for (int c = 0; c < num_colors; c++) {
@@ -147,8 +140,8 @@ for (int i = 0; i < 10; i++) {
       composite(output, overlay, ow, oh, ov_x, ov_y, out_w, out_h);
 
       // Save output
-      char outname[64];
-      sprintf(outname, "%s-%d.png", color_names[c], n);
+      char outname[256];
+      sprintf(outname, "%s%s%s-%d.png", load_config()->osuSkin, "../osuGen/", color_names[c], n);
       stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
       printf("Generated %s\n", outname);
 
