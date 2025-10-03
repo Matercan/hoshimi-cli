@@ -34,11 +34,13 @@ AudioBuffer *load_audio(const char *path) {
 
   sf_count_t read = sf_readf_float(file, buf->data, sfinfo.frames);
   if (read != sfinfo.frames) {
-    printf("Warning: expected %ld frames, got %ld\n", (long)sfinfo.frames, (long)read);
+    printf("Warning: expected %ld frames, got %ld\n", (long)sfinfo.frames,
+           (long)read);
   }
 
   sf_close(file);
-  printf("Loaded %s: %ld frames, %d channels, %d Hz\n", path, (long)buf->frames, buf->channels, buf->samplerate);
+  printf("Loaded %s: %ld frames, %d channels, %d Hz\n", path, (long)buf->frames,
+         buf->channels, buf->samplerate);
   return buf;
 }
 
@@ -133,7 +135,8 @@ int generateSounds(const char *skinDir) {
 
     // Load base hitnormal
     char base_path[512];
-    snprintf(base_path, sizeof(base_path), "%s/%s-hitnormal.wav", skinDir, sampleset);
+    snprintf(base_path, sizeof(base_path), "%s/%s-hitnormal.wav", skinDir,
+             sampleset);
     AudioBuffer *base = load_audio(base_path);
 
     if (!base) {
@@ -146,14 +149,16 @@ int generateSounds(const char *skinDir) {
       const char *addition = additions[a];
 
       char add_path[512];
-      snprintf(add_path, sizeof(add_path), "%s/%s-%s.wav", skinDir, sampleset, addition);
+      snprintf(add_path, sizeof(add_path), "%s/%s-%s.wav", skinDir, sampleset,
+               addition);
       AudioBuffer *add_sound = load_audio(add_path);
 
       if (add_sound) {
         AudioBuffer *mixed = mix_audio(base, add_sound);
 
         char out_path[512];
-        snprintf(out_path, sizeof(out_path), "%s%s%s-hitnormal-%s.wav", load_config()->osuSkin, "../osuGen/", sampleset, addition);
+        snprintf(out_path, sizeof(out_path), "%s%s%s-hitnormal-%s.wav",
+                 load_config()->osuSkin, "../osuGen/", sampleset, addition);
         save_audio(out_path, mixed);
 
         free_audio(mixed);
@@ -165,8 +170,10 @@ int generateSounds(const char *skinDir) {
     for (int a1 = 0; a1 < 3; a1++) {
       for (int a2 = a1 + 1; a2 < 3; a2++) {
         char path1[512], path2[512];
-        snprintf(path1, sizeof(path1), "%s/%s-%s.wav", skinDir, sampleset, additions[a1]);
-        snprintf(path2, sizeof(path2), "%s/%s-%s.wav", skinDir, sampleset, additions[a2]);
+        snprintf(path1, sizeof(path1), "%s/%s-%s.wav", skinDir, sampleset,
+                 additions[a1]);
+        snprintf(path2, sizeof(path2), "%s/%s-%s.wav", skinDir, sampleset,
+                 additions[a2]);
 
         AudioBuffer *add1 = load_audio(path1);
         AudioBuffer *add2 = load_audio(path2);
@@ -176,8 +183,9 @@ int generateSounds(const char *skinDir) {
           AudioBuffer *final = mix_audio(temp, add2);
 
           char out_path[512];
-          snprintf(out_path, sizeof(out_path), "%s%s%s-hitnormal-%s-%s.wav", load_config()->osuSkin, "../osuGen/", sampleset, additions[a1],
-                   additions[a2]);
+          snprintf(out_path, sizeof(out_path), "%s%s%s-hitnormal-%s-%s.wav",
+                   load_config()->osuSkin, "../osuGen/", sampleset,
+                   additions[a1], additions[a2]);
           save_audio(out_path, final);
 
           free_audio(final);
