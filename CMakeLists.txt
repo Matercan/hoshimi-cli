@@ -86,5 +86,6 @@ target_compile_options(osu PRIVATE
 
 target_link_libraries(osu
     m
-    json_handler    
+    json_handler
+    sndfile
 )
