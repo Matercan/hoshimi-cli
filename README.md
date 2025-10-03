@@ -1,5 +1,14 @@
 # hoshimi-cli
 
+<div align=center>
+
+![Top language](https://img.shields.io/github/languages/top/Matercan/hoshimi-cli?style=for-the-badge&labelColor=101418&color=9ccbfb)
+![Code size](https://img.shields.io/github/languages/code-size/Matercan/hoshimi-cli?style=for-the-badge&labelColor=101418&color=b9c8da)
+[![Lines of Code](https://tokei.rs/b1/github/Matercan/hoshimi-cli?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/Matercan/hoshimi-cli)
+![Languages](https://img.shields.io/github/languages/count/Matercan/hoshimi-cli?style=for-the-badge&labelColor=101418&color=b9c8da)
+
+</div>
+
 Controlling hoshimi dotfiles consistently across every hoshimi dotfile.
 
 <details><summary id="dependencies">External dependencies</summary>
@@ -28,7 +37,7 @@ cmake -S . -B build -G Ninja \
   --no-warn-unused-cli
 
 # build
-cmake -- build build --config Debug --target all --
+cmake -- build build --config Release --target all --
 
 # (optional)
 cp build/bin/hoshimi ~/.local/bin/hoshimi
@@ -71,6 +80,8 @@ EXAMPLES:
 
 Subcommands have their own help
 ```
+
+build/bin/osu will also generate osu circles and hitsounds based off a skin specified in the configuration. A default is probided within the dotfiles (Teto's territory)
 
 ## Configuring (To be changed)
 
@@ -178,4 +189,5 @@ The themes are located in ~/.config/hoshimi/themes/ and can be pointed to in the
 ```
 
 </details>
+
 
