@@ -153,7 +153,7 @@ int generateSounds(const char *skinDir) {
         AudioBuffer *mixed = mix_audio(base, add_sound);
 
         char out_path[512];
-        snprintf(out_path, sizeof(out_path), "%s%s-hitnormal-%s.wav", load_config()->osuSkin, sampleset, addition);
+        snprintf(out_path, sizeof(out_path), "%s%s%s-hitnormal-%s.wav", load_config()->osuSkin, "../osuGen/", sampleset, addition);
         save_audio(out_path, mixed);
 
         free_audio(mixed);
