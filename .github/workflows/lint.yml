@@ -25,7 +25,6 @@ jobs:
         clangFormatVersion: 20
         inplace: true
         style: llvm
-        ColumnLimit: 150
 
     - name: Check for changes
       id: verify-changed-files
