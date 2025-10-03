@@ -11,20 +11,26 @@ enum FileType { QS, VALUE_PAIR, DEFAULT_VALUE };
 class FilesManager {
 public:
   fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
-  fs::path getQuickshellFolder() { return DOTFILES_DIRECTORY / ".config/quickshell/"; }
-  fs::path findHomeEquivilent(fs::path dotfile) { return HOME / findDotfilesRelativePath(dotfile); }
+  fs::path getQuickshellFolder() {
+    return DOTFILES_DIRECTORY / ".config/quickshell/";
+  }
+  fs::path findHomeEquivilent(fs::path dotfile) {
+    return HOME / findDotfilesRelativePath(dotfile);
+  }
 
   bool isModifiable(fs::path dotfile) {
     std::ifstream f(dotfile.string());
 
     if (!f.is_open()) {
-      HERR("install " + dotfile.string()) << "Error opening file" << "." << std::endl;
+      HERR("install " + dotfile.string())
+          << "Error opening file" << "." << std::endl;
       return false;
     }
 
     std::string s;
     std::getline(f, s);
-    return s.find("Hoshimi") != std::string::npos; // if Hoshimi is on the top line, it is modifiable
+    return s.find("Hoshimi") !=
+           std::string::npos; // if Hoshimi is on the top line, it is modifiable
   }
 
 private:
@@ -37,7 +43,8 @@ private:
 
   fs::path findDotfilesRelativePath(const fs::path &dotfile) {
     std::vector<std::string> path;
-    boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"), boost::token_compress_on);
+    boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"),
+                            boost::token_compress_on);
 
     auto it = std::find(path.begin(), path.end(), "dotfiles");
     if (it == path.end()) {
@@ -60,7 +67,8 @@ private:
 
   fs::path findConfigRelativePath(const fs::path &dotfile) {
     std::vector<std::string> path;
-    boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"), boost::token_compress_on);
+    boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"),
+                            boost::token_compress_on);
 
     auto it = std::find(path.begin(), path.end(), ".config");
     if (it == path.end()) {
@@ -78,14 +86,19 @@ private:
     return pathS;
   }
 
-  void install_file(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
-                    const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
+  void install_file(const fs::directory_entry &dir_entry, size_t &processed,
+                    size_t &total_files, bool &progress_bar_active,
+                    const bool &verbose,
+                    const std::vector<std::string> &packages,
+                    const std::vector<std::string> &notPackages,
+                    const bool &onlyPackages) {
     // Add mutex for thread safety
     static std::mutex progress_mutex;
 
     // Clear progress bar before verbose output
     if (progress_bar_active && verbose) {
-      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
+      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ')
+                << "\r";
       progress_bar_active = false;
     }
     if (verbose) {
@@ -95,31 +108,42 @@ private:
     fs::path const relative_path = findDotfilesRelativePath(dir_entry.path());
     fs::path const home_equivalent = findHomeEquivilent(dir_entry.path());
     fs::path const backup_path = BACKUP_DIRECTORY / relative_path;
-    std::string const config_relative_path = findConfigRelativePath(dir_entry.path());
+    std::string const config_relative_path =
+        findConfigRelativePath(dir_entry.path());
     if (verbose) {
-      HLOG("install") << "Checking path: " << config_relative_path << "." << std::endl;
+      HLOG("install") << "Checking path: " << config_relative_path << "."
+                      << std::endl;
     }
 
     // Check if file matches any package in the include list
     bool file_in_packages = false;
     if (!packages.empty()) {
-      file_in_packages = std::any_of(packages.begin(), packages.end(),
-                                     [&config_relative_path](const std::string &pkg) { return config_relative_path.find(pkg) != std::string::npos; });
+      file_in_packages = std::any_of(
+          packages.begin(), packages.end(),
+          [&config_relative_path](const std::string &pkg) {
+            return config_relative_path.find(pkg) != std::string::npos;
+          });
     }
 
     // Check if file matches any package in the exclude list
     bool file_excluded = false;
     if (!notPackages.empty()) {
-      file_excluded = std::any_of(notPackages.begin(), notPackages.end(),
-                                  [&config_relative_path](const std::string &pkg) { return config_relative_path.find(pkg) != std::string::npos; });
+      file_excluded = std::any_of(
+          notPackages.begin(), notPackages.end(),
+          [&config_relative_path](const std::string &pkg) {
+            return config_relative_path.find(pkg) != std::string::npos;
+          });
     }
 
     // Determine if file should be installed
-    bool file_installed = !file_excluded && (!onlyPackages || (onlyPackages && file_in_packages));
+    bool file_installed =
+        !file_excluded && (!onlyPackages || (onlyPackages && file_in_packages));
 
     if (verbose) {
-      HLOG("install " + dir_entry.path().string()) << " in_packages: " << file_in_packages << " excluded: " << file_excluded
-                                                   << " will_install: " << file_installed << "." << std::endl;
+      HLOG("install " + dir_entry.path().string())
+          << " in_packages: " << file_in_packages
+          << " excluded: " << file_excluded
+          << " will_install: " << file_installed << "." << std::endl;
     }
 
     if (!file_installed)
@@ -132,7 +156,8 @@ private:
 
       if (fs::is_directory(home_equivalent)) {
         if (verbose) {
-          HLOG("install") << "Backing up directory: " << home_equivalent << " to " << backup_path << "." << std::endl;
+          HLOG("install") << "Backing up directory: " << home_equivalent
+                          << " to " << backup_path << "." << std::endl;
         }
         // For directories, only backup if backup doesn't exist
         if (!fs::exists(backup_path)) {
@@ -140,7 +165,8 @@ private:
         }
       } else {
         if (verbose) {
-          HLOG("install") << "Backing up file: " << home_equivalent << " to " << backup_path << "." << std::endl;
+          HLOG("install") << "Backing up file: " << home_equivalent << " to "
+                          << backup_path << "." << std::endl;
         }
         fs::rename(home_equivalent, backup_path);
       }
@@ -150,14 +176,16 @@ private:
     if (fs::is_directory(dir_entry)) {
       if (!fs::exists(home_equivalent)) {
         if (verbose) {
-          HLOG("install") << "Creating directory: " << home_equivalent << "." << std::endl;
+          HLOG("install") << "Creating directory: " << home_equivalent << "."
+                          << std::endl;
         }
         fs::create_directories(home_equivalent);
       }
     } else {
       // For files, create symlink (file should be backed up by now)
       if (verbose) {
-        HLOG("install") << "Creating symlink: " << dir_entry << " -> " << home_equivalent << "." << std::endl;
+        HLOG("install") << "Creating symlink: " << dir_entry << " -> "
+                        << home_equivalent << "." << std::endl;
       }
 
       // Extra safety check
@@ -169,7 +197,9 @@ private:
       try {
         fs::create_directories(home_equivalent.parent_path());
       } catch (const fs::filesystem_error &e) {
-        HERR("install " + dir_entry.path().string()) << "Filesystem error creating parent directories: " << e.what() << std::endl;
+        HERR("install " + dir_entry.path().string())
+            << "Filesystem error creating parent directories: " << e.what()
+            << std::endl;
         return;
       }
 
@@ -180,21 +210,27 @@ private:
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
           if (processed < total_files)
-            HLOG("install " + dir_entry.path().string()) << "File modifiable by Hoshimi, symlink will not be created." << std::endl;
+            HLOG("install " + dir_entry.path().string())
+                << "File modifiable by Hoshimi, symlink will not be created."
+                << std::endl;
         }
         fs::copy(dir_entry, home_equivalent);
       } else if (!fs::is_symlink(dir_entry)) {
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
           if (verbose)
-            HLOG("install") << "Creating symlink for: " << dir_entry.path().filename() << "." << std::endl;
+            HLOG("install")
+                << "Creating symlink for: " << dir_entry.path().filename()
+                << "." << std::endl;
         }
         fs::create_symlink(dir_entry, home_equivalent);
       } else {
         {
           std::lock_guard<std::mutex> cout_lock(cout_mutex);
           if (verbose)
-            HLOG("install") << "Removing existing symlink: " << dir_entry.path().filename() << "." << std::endl;
+            HLOG("install")
+                << "Removing existing symlink: " << dir_entry.path().filename()
+                << "." << std::endl;
         }
         fs::remove(home_equivalent);
       }
@@ -206,8 +242,9 @@ private:
       processed++;
 
       if (verbose) {
-        HLOG("install") << "Progress: " << processed << "/" << total_files << " (" << int((float)processed / total_files * 100.0) << "%)" << "."
-                        << std::endl;
+        HLOG("install") << "Progress: " << processed << "/" << total_files
+                        << " (" << int((float)processed / total_files * 100.0)
+                        << "%)" << "." << std::endl;
       } else if (processed <= total_files) { // Add bounds check
         float progress = (float)processed / total_files;
         utils.print_progress_bar(progress, processed, total_files);
@@ -218,8 +255,12 @@ private:
     return;
   }
 
-  void installDirectory(const fs::directory_entry &dir_entry, size_t &processed, size_t &total_files, bool &progress_bar_active, const bool &verbose,
-                        const std::vector<std::string> &packages, const std::vector<std::string> &notPackages, const bool &onlyPackages) {
+  void installDirectory(const fs::directory_entry &dir_entry, size_t &processed,
+                        size_t &total_files, bool &progress_bar_active,
+                        const bool &verbose,
+                        const std::vector<std::string> &packages,
+                        const std::vector<std::string> &notPackages,
+                        const bool &onlyPackages) {
 
     static std::mutex threads_mutex;
     std::vector<std::thread> threads;
@@ -227,11 +268,13 @@ private:
 
     // Add error handling for directory access
     std::error_code ec;
-    fs::directory_iterator dir_it(dir_entry, fs::directory_options::skip_permission_denied, ec);
+    fs::directory_iterator dir_it(
+        dir_entry, fs::directory_options::skip_permission_denied, ec);
 
     if (ec) {
       if (verbose) {
-        std::cerr << "Warning: Could not access directory " << dir_entry.path() << ": " << ec.message() << std::endl;
+        std::cerr << "Warning: Could not access directory " << dir_entry.path()
+                  << ": " << ec.message() << std::endl;
       }
       return;
     }
@@ -240,7 +283,8 @@ private:
       try {
         if (fs::is_directory(entry, ec)) {
           if (!ec) {
-            installDirectory(entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
+            installDirectory(entry, processed, total_files, progress_bar_active,
+                             verbose, packages, notPackages, onlyPackages);
           }
         } else if (!ec) {
           std::lock_guard<std::mutex> lock(threads_mutex);
@@ -254,13 +298,17 @@ private:
             threads.clear();
           }
 
-          threads.emplace_back([this, entry, &processed, &total_files, &progress_bar_active, &verbose, &packages, &notPackages, &onlyPackages]() {
-            install_file(entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
+          threads.emplace_back([this, entry, &processed, &total_files,
+                                &progress_bar_active, &verbose, &packages,
+                                &notPackages, &onlyPackages]() {
+            install_file(entry, processed, total_files, progress_bar_active,
+                         verbose, packages, notPackages, onlyPackages);
           });
         }
       } catch (const fs::filesystem_error &e) {
         if (verbose) {
-          HERR(std::string("install") + dir_entry.path().string()) << "Filesystem error: " << e.what() << std::endl;
+          HERR(std::string("install") + dir_entry.path().string())
+              << "Filesystem error: " << e.what() << std::endl;
         }
         continue;
       }
@@ -289,9 +337,12 @@ public:
     }
 
     if (!fs::exists(HOSHIMI_HOME)) {
-      const std::string DOWNLOAD_COMMAND = "git clone https://github.com/Matercan/hoshimi-dots.git " + HOSHIMI_HOME;
+      const std::string DOWNLOAD_COMMAND =
+          "git clone https://github.com/Matercan/hoshimi-dots.git " +
+          HOSHIMI_HOME;
 
-      HLOG("Install") << "Cloning dotfiles from GitHub to " << HOSHIMI_HOME << "." << std::endl;
+      HLOG("Install") << "Cloning dotfiles from GitHub to " << HOSHIMI_HOME
+                      << "." << std::endl;
       HLOG("Install") << "Running: " << DOWNLOAD_COMMAND << "." << std::endl;
       int result = system(DOWNLOAD_COMMAND.c_str());
       if (result != 0) {
@@ -303,9 +354,12 @@ public:
     BACKUP_DIRECTORY = HOSHIMI_HOME + "/backup";
   }
 
-  int install_dotfiles(std::vector<std::string> packages, std::vector<std::string> notPackages, bool verbose, bool onlyPackages) {
+  int install_dotfiles(std::vector<std::string> packages,
+                       std::vector<std::string> notPackages, bool verbose,
+                       bool onlyPackages) {
     if (!fs::exists(DOTFILES_DIRECTORY)) {
-      HERR("Install " + DOTFILES_DIRECTORY.string()) << " Directory not found." << std::endl;
+      HERR("Install " + DOTFILES_DIRECTORY.string())
+          << " Directory not found." << std::endl;
       return 1;
     }
 
@@ -322,26 +376,34 @@ public:
     std::mutex count_mutex;
 
     try {
-      for (const auto &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+      for (const auto &dir_entry :
+           fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
         if (!fs::is_directory(dir_entry)) {
-          std::string const config_relative_path = fs::relative(dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
+          std::string const config_relative_path = fs::relative(
+              dir_entry.path(), DOTFILES_DIRECTORY.string() + ".config");
 
           // Use same logic as install_file
           bool file_in_packages = false;
           if (!packages.empty()) {
-            file_in_packages = std::any_of(packages.begin(), packages.end(), [&config_relative_path](const std::string &pkg) {
-              return config_relative_path.find(pkg) != std::string::npos;
-            });
+            file_in_packages = std::any_of(
+                packages.begin(), packages.end(),
+                [&config_relative_path](const std::string &pkg) {
+                  return config_relative_path.find(pkg) != std::string::npos;
+                });
           }
 
           bool file_excluded = false;
           if (!notPackages.empty()) {
-            file_excluded = std::any_of(notPackages.begin(), notPackages.end(), [&config_relative_path](const std::string &pkg) {
-              return config_relative_path.find(pkg) != std::string::npos;
-            });
+            file_excluded = std::any_of(
+                notPackages.begin(), notPackages.end(),
+                [&config_relative_path](const std::string &pkg) {
+                  return config_relative_path.find(pkg) != std::string::npos;
+                });
           }
 
-          bool will_install = !file_excluded && (!onlyPackages || (onlyPackages && file_in_packages));
+          bool will_install =
+              !file_excluded &&
+              (!onlyPackages || (onlyPackages && file_in_packages));
 
           if (will_install) {
             std::lock_guard<std::mutex> lock(count_mutex);
@@ -356,19 +418,23 @@ public:
     }
 
     if (verbose) {
-      HLOG("Install") << "Total files to process: " << total_files << "." << std::endl;
+      HLOG("Install") << "Total files to process: " << total_files << "."
+                      << std::endl;
     }
 
     size_t processed = 0;
     bool progress_bar_active = false;
 
-    for (auto const &dir_entry : fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-      installDirectory(dir_entry, processed, total_files, progress_bar_active, verbose, packages, notPackages, onlyPackages);
+    for (auto const &dir_entry :
+         fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
+      installDirectory(dir_entry, processed, total_files, progress_bar_active,
+                       verbose, packages, notPackages, onlyPackages);
     }
 
     // Clear progress bar at the end
     if (progress_bar_active) {
-      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ') << "\r";
+      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ')
+                << "\r";
       std::cout.flush();
     }
 
@@ -392,7 +458,8 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
+      HERR("Config") << file.string() << " File opening unsuccessful"
+                     << std::endl;
     }
 
     std::string s;
@@ -412,7 +479,8 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      HERR("Config") << file.string() << " File opening unsuccessful" << std::endl;
+      HERR("Config") << file.string() << " File opening unsuccessful"
+                     << std::endl;
     }
 
     std::string s;
@@ -429,7 +497,8 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config" + file.string()) << " File opening unsuccessful" << std::endl;
+      HERR("Config" + file.string())
+          << " File opening unsuccessful" << std::endl;
       return false;
     }
 
@@ -456,7 +525,8 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config" + file.string()) << " File opening unsuccessful" << std::endl;
+      HERR("Config" + file.string())
+          << " File opening unsuccessful" << std::endl;
       return;
     }
 
@@ -595,7 +665,8 @@ public:
           std::string newLine = "";
           std::vector<std::string> split;
 
-          boost::algorithm::split(split, line, boost::is_any_of(":"), boost::token_compress_on);
+          boost::algorithm::split(split, line, boost::is_any_of(":"),
+                                  boost::token_compress_on);
 
           newLine += split[0] + ": " + value;
           updatedContents += newLine + "\n";
@@ -611,7 +682,8 @@ public:
         if (boost::algorithm::contains(line, key)) {
           std::string newLine;
           std::vector<std::string> split;
-          boost::algorithm::split(split, line, boost::is_any_of("="), boost::token_compress_on);
+          boost::algorithm::split(split, line, boost::is_any_of("="),
+                                  boost::token_compress_on);
 
           for (size_t i = 0; i < split.size() - 1; ++i)
             newLine += split[i] + "=";
@@ -632,12 +704,14 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code)
-      HERR("Config " + file.string()) << " Value of " << key << " not changed." << std::endl;
+      HERR("Config " + file.string())
+          << " Value of " << key << " not changed." << std::endl;
     return exit_code;
   }
   void replaceWithChecking(std::string key, std::string value, bool &exitCode) {
     if (!replaceValue(key, value, nullptr)) {
-      HERR("Config " + file.string()) << " Value of " << key << " not changed." << std::endl;
+      HERR("Config " + file.string())
+          << " Value of " << key << " not changed." << std::endl;
       exitCode = false;
     }
   }
@@ -655,8 +729,14 @@ public:
   QuickshellWriter() {
     colors = ColorsHandler().getColors();
     config = ShellHandler().getConfig();
-    colorsWriter = new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "functions/Colors.qml"), FileType::QS);
-    shellWriter = new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() / "globals/Variables.qml"), FileType::QS);
+    colorsWriter =
+        new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() /
+                                                "functions/Colors.qml"),
+                       FileType::QS);
+    shellWriter =
+        new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() /
+                                                "globals/Variables.qml"),
+                       FileType::QS);
   }
 
   ~QuickshellWriter() {
@@ -666,8 +746,10 @@ public:
 
   bool writeColors() {
     if (!files.isModifiable(colorsWriter->getFile())) {
-      HERR("Config " + colorsWriter->getFile().string()) << "File not modifiable by Hoshimi, skipping." << std::endl;
-      colorsWriter->appendBeforeLine("// File not modifiable by Hoshimi, skipping.\n", 0);
+      HERR("Config " + colorsWriter->getFile().string())
+          << "File not modifiable by Hoshimi, skipping." << std::endl;
+      colorsWriter->appendBeforeLine(
+          "// File not modifiable by Hoshimi, skipping.\n", 0);
     }
     bool exitCode = true;
     if (colors.backgroundColor.light())
@@ -676,18 +758,27 @@ public:
       colorsWriter->replaceWithChecking("light", "false");
 
     for (size_t i = 0; i < colors.palette.size(); ++i) {
-      colorsWriter->replaceWithChecking("paletteColor" + std::to_string(i + 1), colors.palette[i].toHex(Color::FLAGS::WQUOT));
+      colorsWriter->replaceWithChecking(
+          "paletteColor" + std::to_string(i + 1),
+          colors.palette[i].toHex(Color::FLAGS::WQUOT));
     }
-    colorsWriter->replaceWithChecking("backgroundColor", colors.backgroundColor.toHex(Color::FLAGS::WQUOT), exitCode);
-    colorsWriter->replaceWithChecking("foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT), exitCode);
+    colorsWriter->replaceWithChecking(
+        "backgroundColor", colors.backgroundColor.toHex(Color::FLAGS::WQUOT),
+        exitCode);
+    colorsWriter->replaceWithChecking(
+        "foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT),
+        exitCode);
 
     for (size_t i = 2; i < colors.main.size(); ++i) {
-      colorsWriter->replaceWithChecking(Utils().COLOR_NAMES[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
+      colorsWriter->replaceWithChecking(
+          Utils().COLOR_NAMES[i], colors.main[i].toHex(Color::FLAGS::WQUOT),
+          exitCode);
     }
 
     if (!colorsWriter->write()) {
       exitCode = false;
-      std::cerr << "Error writing to file: " << colorsWriter->getFile().filename() << std::endl;
+      std::cerr << "Error writing to file: "
+                << colorsWriter->getFile().filename() << std::endl;
     }
 
     if (!exitCode)
@@ -699,12 +790,17 @@ public:
   bool writeShell() {
     bool exitCode = true;
 
-    shellWriter->replaceWithChecking("wallpaper", "\"" + config.wallpaper.string() + "\"", exitCode);
-    shellWriter->replaceWithChecking("osuDirectory", "\"" + (config.osuSkin.parent_path() / "osuGen").string() + "\"", exitCode);
+    shellWriter->replaceWithChecking(
+        "wallpaper", "\"" + config.wallpaper.string() + "\"", exitCode);
+    shellWriter->replaceWithChecking(
+        "osuDirectory",
+        "\"" + (config.osuSkin.parent_path() / "osuGen").string() + "\"",
+        exitCode);
 
     if (!shellWriter->write()) {
       exitCode = false;
-      HERR("Config " + shellWriter->getFile().string()) << "Error writing to file." << std::endl;
+      HERR("Config " + shellWriter->getFile().string())
+          << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -750,27 +846,38 @@ public:
 
   GhosttyWriter() {
     colors = ColorsHandler().getColors();
-    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/ghostty/themes/hoshimi"), FileType::VALUE_PAIR);
+    writer =
+        WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() /
+                                            ".config/ghostty/themes/hoshimi"),
+                   FileType::VALUE_PAIR);
   }
 
   bool writeConfig() {
     bool exitCode = true;
 
-    writer.replaceWithChecking("background", colors.backgroundColor.toHex(), exitCode);
-    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex(), exitCode);
-    writer.replaceWithChecking("cursor-color", colors.selectedColor.toHex(), exitCode);
-    writer.replaceWithChecking("cursor-text", colors.selectedColor.toHex(), exitCode);
-    writer.replaceWithChecking("selection-background", colors.activeColor.toHex(), exitCode);
-    writer.replaceWithChecking("selection-foreground", colors.activeColor.toHex(), exitCode);
+    writer.replaceWithChecking("background", colors.backgroundColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("cursor-color", colors.selectedColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("cursor-text", colors.selectedColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("selection-background",
+                               colors.activeColor.toHex(), exitCode);
+    writer.replaceWithChecking("selection-foreground",
+                               colors.activeColor.toHex(), exitCode);
 
     for (int i = 0; i < 16; ++i) {
-      writer.replaceValue("palette = " + std::to_string(i), colors.palette[i].toHex(), nullptr);
+      writer.replaceValue("palette = " + std::to_string(i),
+                          colors.palette[i].toHex(), nullptr);
     }
 
     if (!writer.write()) {
       exitCode = false;
 
-      HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
+      HERR("Config " + writer.getFile().string())
+          << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -793,7 +900,9 @@ private:
 public:
   FootWriter() {
     colors = ColorsHandler().getColors();
-    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/foot/foot.ini"), FileType::VALUE_PAIR);
+    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() /
+                                                 ".config/foot/foot.ini"),
+                        FileType::VALUE_PAIR);
   }
 
   bool writeConfig() {
@@ -802,22 +911,28 @@ public:
     writer.empty("[colors]");
     writer.append("[colors]\n");
 
-    writer.append("backdground=" + colors.backgroundColor.toHex(Color::FLAGS::NHASH) + "\n");
-    writer.append("foreground=" + colors.foregroundColor.toHex(Color::FLAGS::NHASH) + "\n");
-    writer.append("selection-background=" + colors.foregroundColor.toHex(Color::FLAGS::NHASH) + "\n\n");
+    writer.append("backdground=" +
+                  colors.backgroundColor.toHex(Color::FLAGS::NHASH) + "\n");
+    writer.append("foreground=" +
+                  colors.foregroundColor.toHex(Color::FLAGS::NHASH) + "\n");
+    writer.append("selection-background=" +
+                  colors.foregroundColor.toHex(Color::FLAGS::NHASH) + "\n\n");
 
     for (int i = 0; i < 8; ++i) {
-      writer.append("regular" + std::to_string(i) + "=" + colors.palette[i].toHex(Color::FLAGS::NHASH) + "\n");
+      writer.append("regular" + std::to_string(i) + "=" +
+                    colors.palette[i].toHex(Color::FLAGS::NHASH) + "\n");
     }
     writer.append("\n");
     for (int i = 8; i < 16; ++i) {
-      writer.append("bright" + std::to_string(i - 8) + "=" + colors.palette[i].toHex(Color::FLAGS::NHASH) + "\n");
+      writer.append("bright" + std::to_string(i - 8) + "=" +
+                    colors.palette[i].toHex(Color::FLAGS::NHASH) + "\n");
     }
     writer.append("\n");
 
     if (!writer.write()) {
       exitCode = false;
-      HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
+      HERR("Config " + writer.getFile().string())
+          << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -837,30 +952,39 @@ private:
 public:
   KittyWriter() {
     colors = ColorsHandler().getColors();
-    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/kitty/hoshimi.conf"), FileType::VALUE_PAIR);
+    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() /
+                                                 ".config/kitty/hoshimi.conf"),
+                        FileType::VALUE_PAIR);
   }
 
   void reloadKitty() {
     // Send SIGUSR1 to kitty to reload config if running
-    system("if pgrep -x kitty > /dev/null; then kill -USR1 $(pgrep -x kitty); fi");
+    system(
+        "if pgrep -x kitty > /dev/null; then kill -USR1 $(pgrep -x kitty); fi");
   }
 
   bool writeConfig() {
     bool exitCode = true;
 
-    writer.replaceWithChecking("background", colors.backgroundColor.toHex(), exitCode);
-    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex(), exitCode);
-    writer.replaceWithChecking("cursor", colors.selectedColor.toHex(), exitCode);
-    writer.replaceWithChecking("selection_background", colors.activeColor.toHex(), exitCode);
+    writer.replaceWithChecking("background", colors.backgroundColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("foreground", colors.foregroundColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("cursor", colors.selectedColor.toHex(),
+                               exitCode);
+    writer.replaceWithChecking("selection_background",
+                               colors.activeColor.toHex(), exitCode);
 
     for (int i = 0; i < 16; ++i) {
       // kitty palette entries are usually 'color0 #000000'
-      writer.replaceValue("color" + std::to_string(i), colors.palette[i].toHex(), nullptr);
+      writer.replaceValue("color" + std::to_string(i),
+                          colors.palette[i].toHex(), nullptr);
     }
 
     if (!writer.write()) {
       exitCode = false;
-      HERR("Config " + writer.getFile().string()) << "Error writing to file." << std::endl;
+      HERR("Config " + writer.getFile().string())
+          << "Error writing to file." << std::endl;
     }
 
     if (!exitCode)
@@ -879,7 +1003,10 @@ private:
   FilesManager files;
   WriterBase writer;
 
-  fs::path getAlacrittyPath() { return files.findHomeEquivilent(files.getdotfilesDirectory() / ".config/alacritty/themes/hoshimi.toml"); }
+  fs::path getAlacrittyPath() {
+    return files.findHomeEquivilent(files.getdotfilesDirectory() /
+                                    ".config/alacritty/themes/hoshimi.toml");
+  }
 
 public:
   AlacrittyWriter() {
@@ -900,24 +1027,32 @@ public:
     writer.append("transparent_background_colors = true\n\n");
 
     writer.append("[colors.primary]\n");
-    writer.append("background = " + colors.backgroundColor.toHex(Color::FLAGS::WQUOT) + "\n");
-    writer.append("foreground = " + colors.foregroundColor.toHex(Color::FLAGS::WQUOT) + "\n\n");
+    writer.append("background = " +
+                  colors.backgroundColor.toHex(Color::FLAGS::WQUOT) + "\n");
+    writer.append("foreground = " +
+                  colors.foregroundColor.toHex(Color::FLAGS::WQUOT) + "\n\n");
 
     // Normal colors (standard order)
-    static const char *normal_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
+    static const char *normal_names[8] = {"black", "red",     "green", "yellow",
+                                          "blue",  "magenta", "cyan",  "white"};
     writer.append("[colors.normal]\n");
     for (int i = 0; i < 8; ++i) {
-      std::string hex = (i < (int)colors.palette.size()) ? colors.palette[i].toHex(Color::FLAGS::WQUOT) : std::string("#000000");
+      std::string hex = (i < (int)colors.palette.size())
+                            ? colors.palette[i].toHex(Color::FLAGS::WQUOT)
+                            : std::string("#000000");
       writer.append(std::string(normal_names[i]) + " = " + hex + "\n");
     }
     writer.append("\n");
 
     // Bright colors (palette[8..15])
-    static const char *bright_names[8] = {"black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"};
+    static const char *bright_names[8] = {"black", "red",     "green", "yellow",
+                                          "blue",  "magenta", "cyan",  "white"};
     writer.append("[colors.bright]\n");
     for (int i = 0; i < 8; ++i) {
       int idx = 8 + i;
-      std::string hex = (idx < (int)colors.palette.size()) ? colors.palette[idx].toHex(Color::FLAGS::WQUOT) : colors.palette[i].toHex();
+      std::string hex = (idx < (int)colors.palette.size())
+                            ? colors.palette[idx].toHex(Color::FLAGS::WQUOT)
+                            : colors.palette[i].toHex();
       writer.append(std::string(bright_names[i]) + " = " + hex + "\n");
     }
     writer.append("\n");
@@ -947,7 +1082,8 @@ private:
    * @param value - The string value to set
    * @return 1 on success, 0 on failure
    */
-  int set_nested_value(cJSON *root, const char **keys, int key_count, const char *value) {
+  int set_nested_value(cJSON *root, const char **keys, int key_count,
+                       const char *value) {
     if (!root || !keys || key_count <= 0) {
       return 0;
     }
@@ -1023,7 +1159,8 @@ private:
   /**
    * Set nested value with different data types
    */
-  int set_nested_value_number(cJSON *root, const char **keys, int key_count, double value) {
+  int set_nested_value_number(cJSON *root, const char **keys, int key_count,
+                              double value) {
     if (!root || !keys || key_count <= 0) {
       return 0;
     }
@@ -1092,7 +1229,8 @@ private:
           continue;
         } else if (c == '}' || c == ']') {
           // Remove trailing spaces/commas before closing brace
-          while (out_pos > 0 && (formatted[out_pos - 1] == ' ' || formatted[out_pos - 1] == '\n')) {
+          while (out_pos > 0 && (formatted[out_pos - 1] == ' ' ||
+                                 formatted[out_pos - 1] == '\n')) {
             out_pos--;
           }
           formatted[out_pos++] = '\n';
@@ -1136,17 +1274,20 @@ public:
 
   const char *getJson(const std::vector<std::string> &keys) {
     const bool getTheme = keys[0] == "theme";
-    const char *fileToCheck = getTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
+    const char *fileToCheck =
+        getTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
     HLOG("Json") << "Getting info from " << fileToCheck << "." << std::endl;
 
     // Read from file
     std::ifstream input(fileToCheck, std::ios::binary);
     if (!input) {
-      std::cerr << "Unable to open  the file for reading: " << fileToCheck << std::endl;
+      std::cerr << "Unable to open  the file for reading: " << fileToCheck
+                << std::endl;
       return NULL;
     }
 
-    std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    std::string content((std::istreambuf_iterator<char>(input)),
+                        std::istreambuf_iterator<char>());
     input.close();
 
     cJSON *json = cJSON_Parse(content.c_str());
@@ -1171,7 +1312,8 @@ public:
     // Get the value
     const char *value = get_nested_value(json, cKeys.data(), cKeys.size());
     if (value == NULL) {
-      std::cerr << "Error getting the value of " << cKeys[cKeys.size() - 1] << " in object " << cKeys[cKeys.size() - 2] << std::endl;
+      std::cerr << "Error getting the value of " << cKeys[cKeys.size() - 1]
+                << " in object " << cKeys[cKeys.size() - 2] << std::endl;
       cJSON_Delete(json);
       return NULL;
     }
@@ -1181,7 +1323,8 @@ public:
 
   bool writeJson(const std::vector<std::string> &keys, const char *value) {
     const bool editTheme = keys[0] == "theme";
-    const char *fileToEdit = editTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
+    const char *fileToEdit =
+        editTheme ? THEME_CONFIG_FILE.c_str() : MAIN_CONFIG_PATH.c_str();
     HLOG("Json") << "Editing " << fileToEdit << "." << std::endl;
 
     cJSON *json = getJsonFromFile(fileToEdit);
@@ -1218,7 +1361,8 @@ public:
     // Write using streams
     std::ofstream output(fileToEdit);
     if (!output) {
-      std::cerr << "Unable to open file for writing: " << fileToEdit << std::endl;
+      std::cerr << "Unable to open file for writing: " << fileToEdit
+                << std::endl;
       cJSON_free(json_string);
       cJSON_Delete(json);
       return false;
