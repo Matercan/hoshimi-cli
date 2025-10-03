@@ -43,8 +43,14 @@ add_library(json_handler SHARED
     src/common/json/json.hpp
     src/common/json/json_wrapper.cpp
 )
+set_target_properties(json_handler PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+
 target_link_libraries(json_handler cjson)
 target_include_directories(json_handler PRIVATE ${cJSON_INCLUDE_DIRS})
+
+
 
 add_executable(hoshimi
     src/main.cpp
