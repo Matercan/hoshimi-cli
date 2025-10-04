@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config libcjson-dev lbsndfile1-dev
+        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config libcjson-dev libsndfile1-dev
     
     - name: Create build directory
       run: mkdir build
