@@ -792,10 +792,11 @@ public:
 
     shellWriter->replaceWithChecking(
         "wallpaper", "\"" + config.wallpaper.string() + "\"", exitCode);
-    shellWriter->replaceWithChecking(
+    HDBG("Quickshell") << (config.osuSkin.parent_path() / "osuGen").string();
+    shellWriter->replaceValue(
         "osuDirectory",
         "\"" + (config.osuSkin.parent_path() / "osuGen").string() + "\"",
-        exitCode);
+        nullptr);
 
     if (!shellWriter->write()) {
       exitCode = false;

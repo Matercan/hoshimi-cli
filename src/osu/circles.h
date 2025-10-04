@@ -74,8 +74,8 @@ int generateCircles() {
   int hw, hh, hc;
   char *osuPath = load_config()->osuSkin;
   char *osuPathCopy = strdup(osuPath); // Duplicate to avoid modifying original
-  char *hitCirclePath = strcat(osuPath, "hitcircle.png");
-  char *circleOverlayPath = strcat(osuPathCopy, "hitcircleoverlay.png");
+  char *hitCirclePath = strcat(osuPath, "/hitcircle.png");
+  char *circleOverlayPath = strcat(osuPathCopy, "/hitcircleoverlay.png");
 
   unsigned char *hitcircle = stbi_load(hitCirclePath, &hw, &hh, &hc, 4);
   if (!hitcircle) {
@@ -140,7 +140,7 @@ int generateCircles() {
 
     char outname[256];
 
-    sprintf(outname, "%s%s%s.png", load_config()->osuSkin, "../osuGen/",
+    sprintf(outname, "%s/../osuGen/%s.png", load_config()->osuSkin,
             color_names[c]);
     stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
 
@@ -166,7 +166,7 @@ int generateCircles() {
 
       // Save output
       char outname[256];
-      sprintf(outname, "%s%s%s-%d.png", load_config()->osuSkin, "../osuGen/",
+      sprintf(outname, "%s/../osuGen/%s-%d.png", load_config()->osuSkin,
               color_names[c], n);
       stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
 
