@@ -185,14 +185,28 @@ public:
           << std::endl;
       return config;
     }
-    for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
-      if (cJSON_IsString(cmd) && cmd->valuestring) {
-        config.commands =
-            (char **)realloc(config.commands, sizeof(char *) * (1 + 1));
-        config.commands[0] = strdup(cmd->valuestring);
-        config.commands[1] = NULL; // Null-terminate the array
-      }
+
+int i = 0;
+for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
+  if (cJSON_IsString(cmd) && cmd->valuestring) {
+    HDBG("JSON") << cmd->valuestring << std::endl;
+    
+    // Allocate space for (i+2) pointers: existing i elements + new element + NULL terminator
+    config.commands = (char **)realloc(config.commands, (i + 2) * sizeof(char *));
+    if (!config.commands) {
+      // Handle allocation failure
+      HERR("JSON") << "Memory allocation failed for commands." << std::endl;
+      return config;
     }
+    
+    config.commands[i] = cmd->valuestring;
+    config.commands[i + 1] = nullptr; // Always null-terminate
+    
+    HDBG("JSON") << config.commands[i] << std::endl;
+    ++i;
+  }
+}
+
     std::string osuPath = getString(globals, "osuSkin");
     trim(osuPath);
 
