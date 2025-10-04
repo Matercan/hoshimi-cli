@@ -28,7 +28,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   ) 
 endif()
 
+project(osu-exe)
 project(hoshimi)
+
 add_compile_options(
     -Wall
     -Wextra
@@ -72,7 +74,7 @@ target_compile_options(json_handler PRIVATE
 target_link_libraries(json_handler cjson)
 target_include_directories(json_handler PRIVATE ${cJSON_INCLUDE_DIRS})
 
-project(osu-exe)
+
 
 add_executable(osu-exe 
     src/osu/osu_assembler.c 
@@ -95,7 +97,7 @@ target_link_libraries(osu-exe
 )
 
 
-add_library(osu 
+add_library(osu SHARED
     src/osu/osu.c
     src/osu/osu.h
     src/osu/stb_impl.c

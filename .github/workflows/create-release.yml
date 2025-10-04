@@ -23,8 +23,9 @@ jobs:
           release_name: Release ${{ github.ref }}
           body: |
             Changes in this Release
-            - General code improvements especially with variable names
-            - Dumping writer's contents.
-            - Most improtantly, added the ability to run commands after sourcing the config
+            - Osu circle generation support
+            - Osu circle assembler tool
+            - Bug fixes and improvements
+            - Moved things to shared libraries
           draft: false
           prerelease: true
