@@ -80,6 +80,11 @@ public:
 
   std::string getThemePath() { return THEME_CONFIG_FILE.string(); }
 
+  ~JsonHandlerBase() {
+    cJSON_free(MAIN_CONFIG_JSON);
+    cJSON_free(THEME_CONFIG_JSON);
+  }
+
 protected:
   fs::path CONFIG_DIRECTORY_PATH;
   fs::path THEMES_PATH;
@@ -188,9 +193,6 @@ public:
         if (cJSON_IsString(cmd) && cmd->valuestring) {
           HDBG("JSON") << cmd->valuestring << std::endl;
 
-          // Allocate space for (i+2) pointers: existing i elements + new
-          // element
-          // + NULL terminator
           config.commands =
               (char **)realloc(config.commands, (i + 2) * sizeof(char *));
           if (!config.commands) {
@@ -200,7 +202,7 @@ public:
             continue;
           }
 
-          config.commands[i] = cmd->valuestring;
+          config.commands[i] = strdup(cmd->valuestring);
           config.commands[i + 1] = nullptr; // Always null-terminate
 
           HDBG("JSON") << config.commands[i] << std::endl;
@@ -217,6 +219,10 @@ public:
         osuPath = std::string(home) + osuPath.substr(1);
       }
     }
+
+    cJSON_free(commandsJson);
+    cJSON_free(globals);
+
     config.osuSkin = osuPath;
     HDBG("JSON") << "OSU Skin: " << config.osuSkin << std::endl;
 
