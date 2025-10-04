@@ -1,5 +1,5 @@
 #include "json_wrapper.h"
-#include "json.hpp" // Your existing C++ code
+#include "json.hpp"
 #include <cstdlib>
 
 extern "C" {

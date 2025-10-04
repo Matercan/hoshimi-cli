@@ -1,0 +1,59 @@
+#compdef hoshimi
+
+_hoshimi() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    local -a commands
+    commands=(
+        'install:Install dotfiles by cloning repository and creating symlinks'
+        'help:Show help message'
+        'arch-install:Install all packages necessary for this shell using paru'
+        'version:Get version information of hoshimi'
+        'update:Update dotfiles to the most recent master commit'
+        'config:Get or set config options within your configuration'
+        'source:Source current configuration, updating modifiable dotfiles'
+        'restart:(re)start the shell and reload terminals'
+        'osu-generate:Generate osu items needed for the race'
+    )
+
+    local -a global_options
+    global_options=(
+        '(-h --help)'{-h,--help}'[Show help message]'
+        '(-v --verbose)'{-v,--verbose}'[Enable verbose output]'
+        '(-f --force)'{-f,--force}'[Force overwrite existing files without backup]'
+        '(-p --packages)'{-p,--packages}'[Comma-separated list of packages to install or source]:packages:'
+        '(-np --not-packages)'{-np,--not-packages}'[Comma-separated list of packages NOT to install or source]:packages:'
+        '--no-secondary-commands[Do not do followup commands]'
+        '--version[Show version information]'
+    )
+
+    _arguments -C \
+        '1: :->command' \
+        '*::arg:->args' \
+        $global_options
+
+    case $state in
+        command)
+            _describe -t commands 'hoshimi command' commands
+            ;;
+        args)
+            case $line[1] in
+                install|source)
+                    _arguments \
+                        '(-h --help)'{-h,--help}'[Show help message]' \
+                        '(-v --verbose)'{-v,--verbose}'[Enable verbose output]' \
+                        '(-f --force)'{-f,--force}'[Force overwrite existing files without backup]' \
+                        '(-p --packages)'{-p,--packages}'[Comma-separated list of packages]:packages:(hypr hyprland waybar fastfetch quickshell kitty rofi wofi dunst)' \
+                        '(-np --not-packages)'{-np,--not-packages}'[Comma-separated list of packages NOT to install]:packages:(hypr hyprland waybar fastfetch quickshell kitty rofi wofi dunst)' \
+                        '--no-secondary-commands[Do not do followup commands]'
+                    ;;
+                *)
+                    _arguments $global_options
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_hoshimi "$@"

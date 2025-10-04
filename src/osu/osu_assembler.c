@@ -1,5 +1,4 @@
-#include "circles.h"
-#include "hitsounds.h"
+#include "osu.h"
 
 int main() {
   generateCircles();

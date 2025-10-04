@@ -26,11 +26,11 @@ AudioBuffer *load_audio(const char *path) {
     return NULL;
   }
 
-  AudioBuffer *buf = malloc(sizeof(AudioBuffer));
+  AudioBuffer *buf = (AudioBuffer *)malloc(sizeof(AudioBuffer));
   buf->frames = sfinfo.frames;
   buf->channels = sfinfo.channels;
   buf->samplerate = sfinfo.samplerate;
-  buf->data = malloc(sizeof(float) * sfinfo.frames * sfinfo.channels);
+  buf->data = (float *)malloc(sizeof(float) * sfinfo.frames * sfinfo.channels);
 
   sf_count_t read = sf_readf_float(file, buf->data, sfinfo.frames);
   if (read != sfinfo.frames) {
@@ -54,11 +54,11 @@ AudioBuffer *mix_audio(AudioBuffer *a, AudioBuffer *b) {
   int channels = a->channels > b->channels ? a->channels : b->channels;
   int samplerate = a->samplerate;
 
-  AudioBuffer *result = malloc(sizeof(AudioBuffer));
+  AudioBuffer *result = (AudioBuffer *)malloc(sizeof(AudioBuffer));
   result->frames = max_frames;
   result->channels = channels;
   result->samplerate = samplerate;
-  result->data = calloc(max_frames * channels, sizeof(float));
+  result->data = (float *)calloc(max_frames * channels, sizeof(float));
 
   // Mix buffer a
   for (sf_count_t i = 0; i < a->frames; i++) {

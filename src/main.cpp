@@ -1,6 +1,8 @@
 #include "common/utils.hpp"
 #include "files.hpp"
+#include "osu/osu.h"
 #include "version.h"
+#include <vector>
 
 namespace fs = std::filesystem;
 std::vector<std::string> packages;
@@ -44,8 +46,9 @@ void print_help(const std::string &program_name,
                "configuration\n";
   std::cout << "    source        Source the current configuration, updating "
                "the modifiable dotfiles \n";
+  std::cout << "    restart       (re)start the shell and reload terminals. \n";
   std::cout
-      << "    restart       (re)start the shell and reload terminals. \n\n";
+      << "    osu-generate    generate osu items needed for the race. \n\n";
 
   std::cout << "OPTIONS:\n";
 
@@ -265,6 +268,10 @@ int main(int argc, char *argv[]) {
 
     restart(config, argv);
 
+  } else if (command == "osu-generate") {
+    genOsu();
+    return 0;
+
   } else if (command == "version") {
     std::cout << "hoshimi v" << HOSHIMI_VERSION << std::endl;
     if (config[0].present) {
@@ -431,6 +438,6 @@ void restart(std::vector<Flag> &config, char *argv[]) {
   delete gs;
 
   system("killall qs; \n "
-         " qs > /dev/null 2>&1 &");
+         "nohup  qs > /dev/null 2>&1 &");
   HLOG("main") << "Hoshimi restarted" << std::endl;
 }

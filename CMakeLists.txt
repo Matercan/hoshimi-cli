@@ -28,12 +28,19 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   ) 
 endif()
 
-if (WIN32)
-    message("haha, you stinky loser - this doesn't work on windows")
-endif (WIN32)
-
-
 project(hoshimi)
+add_compile_options(
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wno-unused-parameter
+    -Wno-unused-value
+    -Wno-missing-field-initializers
+    -Wno-gnu-zero-variadic-macro-arguments
+    -Wno-narrowing
+    -Wno-pointer-arith
+    -fdiagnostics-color=always
+)
 
 set(HOSHIMI_VERSION "0.2.9")
 set(HOSHIMI_RELEASE_DATE "30th September")
@@ -46,7 +53,9 @@ configure_file(
 
 find_package(Boost REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(SndFile REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
+
 
 add_library(json_handler SHARED
     src/common/json/json.hpp
@@ -55,38 +64,40 @@ add_library(json_handler SHARED
 set_target_properties(json_handler PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
+target_compile_options(json_handler PRIVATE 
+    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+    "$<${msvc_cxx}:-Wall;-Wunused;-Wformat=2>"
+)
 
 target_link_libraries(json_handler cjson)
 target_include_directories(json_handler PRIVATE ${cJSON_INCLUDE_DIRS})
 
+project(osu-exe)
 
-
-add_executable(hoshimi
-    src/main.cpp
+add_executable(osu-exe 
+    src/osu/osu_assembler.c 
+    src/osu/stb_impl.c
 )
 
-set_target_properties(hoshimi PROPERTIES
+set_target_properties(osu-exe PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
 
-target_compile_options(hoshimi PRIVATE
-    "$<${gcc_like_cxx}:-Wall;-Werror;-Wunused;-Wformat=2>"
-    "$<${msvc_cxx}:-Wall;-Werror;-Wunused;-Wformat=2>"
+target_compile_options(osu-exe PRIVATE 
+    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+    "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
 )
-target_include_directories(hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
-target_link_libraries(hoshimi
+target_link_libraries(osu-exe
+    m
     json_handler
-    cjson
+    sndfile
 )
-target_include_directories(hoshimi PRIVATE Boost::headers)
-target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
-target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
 
-project(osu)
 
-add_executable(osu 
-    src/osu/osu_assembler.c
+add_library(osu 
+    src/osu/osu.c
+    src/osu/osu.h
     src/osu/stb_impl.c
 )
 
@@ -94,13 +105,57 @@ set_target_properties(osu PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
 
+target_include_directories(osu PUBLIC src/osu)
+
 target_compile_options(osu PRIVATE 
-    "$<${gcc_like_cxx}:-Wall;-Werror;-Wunused;-Wformat=2>"
-    "$<${msvc_cxx}:-Wall;-Werror;-Wunused;-Wformat=2>"
+    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+    "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
 )
 
 target_link_libraries(osu
     m
     json_handler
     sndfile
+)
+
+
+
+add_executable(hoshimi
+    src/main.cpp
+    src/osu/stb_impl.c
+)
+
+set_target_properties(hoshimi PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+
+target_compile_options(hoshimi PRIVATE
+    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+    "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+)
+target_include_directories(hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+target_link_libraries(hoshimi
+    json_handler
+    osu
+    cjson
+    m
+    sndfile
+)
+target_include_directories(hoshimi PRIVATE Boost::headers)
+target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
+target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
+
+install(TARGETS hoshimi
+    RUNTIME DESTINATION bin
+)
+
+# Fish completions
+install(FILES completions/hoshimi.fish
+    DESTINATION share/fish/vendor_completions.d
+)
+
+# Zsh completions
+install(FILES completions/_hoshimi
+    DESTINATION share/zsh/site-functions
 )
