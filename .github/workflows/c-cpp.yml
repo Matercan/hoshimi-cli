@@ -16,16 +16,16 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config libcjson-dev
+        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config libcjson-dev lbsndfile1-dev
     
     - name: Create build directory
       run: mkdir build
     
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build build --config Debug --target hoshimi
+      run: cmake --build build --config Release --target all
     
     - name: Test (optional)
       run: |
