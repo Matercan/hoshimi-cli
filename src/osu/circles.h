@@ -110,8 +110,6 @@ int generateCircles() {
     snprintf(filename, sizeof(filename), "%s/fonts/hitcircle/default-%d.png",
              config->osuSkin, i);
 
-    printf("Loading: %s\n", filename);
-
     int nc;
     numbers[i] = stbi_load(filename, &nw[i], &nh[i], &nc, 4);
     if (!numbers[i]) {
@@ -125,11 +123,27 @@ int generateCircles() {
       free_colorscheme(colors);
       return 1;
     }
-    printf("Loaded number %d: %dx%d\n", i, nw[i], nh[i]);
   }
 
   // Generate circles for each color and combo number 1-9
   for (int c = 0; c < num_colors; c++) {
+    int out_w = hw;
+    int out_h = hh;
+    unsigned char *output = (unsigned char *)calloc(out_w * out_h * 4, 1);
+
+    mempcpy(output, hitcircle, hw * hh * 4);
+    tint_image(output, hw, hh, colors->palette[c]);
+
+    int ov_x = (out_w - ow) / 2;
+    int ov_y = (out_h - oh) / 2;
+    composite(output, overlay, ow, oh, ov_x, ov_y, out_w, out_h);
+
+    char outname[256];
+
+    sprintf(outname, "%s%s%s.png", load_config()->osuSkin, "../osuGen/",
+            color_names[c]);
+    stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
+
     for (int n = 1; n <= 9; n++) {
       // Create output buffer
       int out_w = hw;
@@ -155,7 +169,6 @@ int generateCircles() {
       sprintf(outname, "%s%s%s-%d.png", load_config()->osuSkin, "../osuGen/",
               color_names[c], n);
       stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
-      printf("Generated %s\n", outname);
 
       free(output);
     }

@@ -39,8 +39,6 @@ AudioBuffer *load_audio(const char *path) {
   }
 
   sf_close(file);
-  printf("Loaded %s: %ld frames, %d channels, %d Hz\n", path, (long)buf->frames,
-         buf->channels, buf->samplerate);
   return buf;
 }
 
@@ -85,7 +83,6 @@ AudioBuffer *mix_audio(AudioBuffer *a, AudioBuffer *b) {
   }
 
   if (max_sample > 1.0f) {
-    printf("Normalizing by factor %.2f\n", max_sample);
     for (sf_count_t i = 0; i < max_frames * channels; i++) {
       result->data[i] /= max_sample;
     }
@@ -112,7 +109,6 @@ int save_audio(const char *path, AudioBuffer *buf) {
   sf_count_t written = sf_writef_float(file, buf->data, buf->frames);
   sf_close(file);
 
-  printf("Saved %s: %ld frames\n", path, (long)written);
   return 1;
 }
 
