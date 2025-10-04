@@ -792,7 +792,6 @@ public:
 
     shellWriter->replaceWithChecking(
         "wallpaper", "\"" + config.wallpaper.string() + "\"", exitCode);
-    HDBG("Quickshell") << (config.osuSkin.parent_path() / "osuGen").string();
     shellWriter->replaceValue(
         "osuDirectory",
         "\"" + (config.osuSkin.parent_path() / "osuGen").string() + "\"",

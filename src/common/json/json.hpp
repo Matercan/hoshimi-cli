@@ -1,7 +1,9 @@
 #pragma once
 
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <cjson/cJSON.h>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <regex>
@@ -121,9 +123,18 @@ public:
       return std::string(it->valuestring);
     };
 
+    auto trim = [&](std::string &str) {
+      const auto strEnd = str.find_last_not_of('/');
+      const auto strBegin = 0;
+      const auto strRange = strEnd - strBegin + 1;
+
+      str = str.substr(strBegin, strRange);
+    };
+
     std::string wallpaper = getString(themeConfig, "wallpaper");
     cJSON *globals = getObj(mainConfig, "globals");
     std::string wallpaperDirectory = getString(globals, "wallpaperDirectory");
+    trim(wallpaperDirectory);
 
     // Helper function to check if file exists
     auto fileExists = [](const std::string &path) {
@@ -183,6 +194,8 @@ public:
       }
     }
     std::string osuPath = getString(globals, "osuSkin");
+    trim(osuPath);
+
     if (home) {
       if (osuPath.find("~/", 0) == 0) {
         osuPath = std::string(home) + osuPath.substr(1);
