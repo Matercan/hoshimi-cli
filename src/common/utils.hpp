@@ -1,12 +1,9 @@
 #pragma once
 
 #include <algorithm>
-#include <bits/ostream.h>
 #include <iomanip>
 #include <iostream>
-#include <ostream>
 #include <sys/ioctl.h>
-#include <system_error>
 #include <unistd.h>
 #include <vector>
 
