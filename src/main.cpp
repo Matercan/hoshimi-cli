@@ -1,3 +1,4 @@
+#include "common/utils.hpp"
 #include "files.hpp"
 #include "version.h"
 
@@ -85,6 +86,8 @@ void getConfigArg(int argc, char *argv[], bool &setB, std::string &configArg,
 void sourceConfig(std::vector<Flag> config);
 
 int main(int argc, char *argv[]) {
+  HDBG("Utils") << "ass" << std::endl;
+
   std::vector<Flag> config = {
       Flag(false, {"-v", "--verbose"},
            "Enable verbose output (show detailed operations)"),
@@ -318,7 +321,7 @@ void sourceConfig(std::vector<Flag> config) {
     HLOG("main") << "Running command: " << shellConfig.commands[i] << std::endl;
 
     if (system(shellConfig.commands[i]) != 0) {
-      HERR("main") << "Failed to run command: " << shellConfig.commands[i]
+      HERR("main") << "\nFailed to run command: " << shellConfig.commands[i]
                    << std::endl;
     }
   }

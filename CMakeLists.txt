@@ -19,6 +19,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(DEBUG_MODE ON)  
+  configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+      @ONLY
+  ) 
+endif()
+
 if (WIN32)
     message("haha, you stinky loser - this doesn't work on windows")
 endif (WIN32)

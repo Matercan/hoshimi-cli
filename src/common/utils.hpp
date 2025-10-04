@@ -1,9 +1,12 @@
 #pragma once
 
 #include <algorithm>
+#include <bits/ostream.h>
 #include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <sys/ioctl.h>
+#include <system_error>
 #include <unistd.h>
 #include <vector>
 
@@ -13,8 +16,21 @@
   std::cout << "\033[1;39m[LOG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
 #define HERR(tag)                                                              \
   std::cerr << "\033[1;31m[Error]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+
+#ifdef DEBUG_MODE
+#include <iostream>
 #define HDBG(tag)                                                              \
   std::cout << "\033[1;36m[DBG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
+#else
+// No-op version for release builds
+class DumbNull {
+public:
+  template <typename T> DumbNull &operator<<(const T &) { return *this; }
+  DumbNull &operator<<(std::ostream &(*)(std::ostream &)) { return *this; }
+};
+#define HDBG(tag) DumbNull()
+
+#endif // DEBUG_MODE
 
 class Utils {
 public:
