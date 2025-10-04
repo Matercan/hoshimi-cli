@@ -14,7 +14,7 @@
 #define HERR(tag)                                                              \
   std::cerr << "\033[1;31m[Error]\033[0m " << "\033[2m[" << tag << "]\033[0m "
 
-#ifdef DEBUG_MODE
+#ifdef DEBUG
 #include <iostream>
 #define HDBG(tag)                                                              \
   std::cout << "\033[1;36m[DBG]\033[0m " << "\033[2m[" << tag << "]\033[0m "
@@ -27,7 +27,7 @@ public:
 };
 #define HDBG(tag) DumbNull()
 
-#endif // DEBUG_MODE
+#endif // DEBUG
 
 class Utils {
 public:

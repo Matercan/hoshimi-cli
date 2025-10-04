@@ -179,33 +179,33 @@ public:
 
     // Get commands array
     cJSON *commandsJson = getObj(THEME_CONFIG_JSON, "commands");
-    if (!cJSON_IsArray(commandsJson)) {
-      HERR("JSON " + THEME_CONFIG_FILE.string())
-          << "Warning: 'commands' key missing or not an array in main config."
-          << std::endl;
-      return config;
-    }
+    bool commandsExist = cJSON_IsArray(commandsJson);
 
-    int i = 0;
-    for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
-      if (cJSON_IsString(cmd) && cmd->valuestring) {
-        HDBG("JSON") << cmd->valuestring << std::endl;
+    if (commandsExist) {
 
-        // Allocate space for (i+2) pointers: existing i elements + new element
-        // + NULL terminator
-        config.commands =
-            (char **)realloc(config.commands, (i + 2) * sizeof(char *));
-        if (!config.commands) {
-          // Handle allocation failure
-          HERR("JSON") << "Memory allocation failed for commands." << std::endl;
-          return config;
+      int i = 0;
+      for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
+        if (cJSON_IsString(cmd) && cmd->valuestring) {
+          HDBG("JSON") << cmd->valuestring << std::endl;
+
+          // Allocate space for (i+2) pointers: existing i elements + new
+          // element
+          // + NULL terminator
+          config.commands =
+              (char **)realloc(config.commands, (i + 2) * sizeof(char *));
+          if (!config.commands) {
+            // Handle allocation failure
+            HERR("JSON") << "Memory allocation failed for commands."
+                         << std::endl;
+            continue;
+          }
+
+          config.commands[i] = cmd->valuestring;
+          config.commands[i + 1] = nullptr; // Always null-terminate
+
+          HDBG("JSON") << config.commands[i] << std::endl;
+          ++i;
         }
-
-        config.commands[i] = cmd->valuestring;
-        config.commands[i + 1] = nullptr; // Always null-terminate
-
-        HDBG("JSON") << config.commands[i] << std::endl;
-        ++i;
       }
     }
 
@@ -218,6 +218,7 @@ public:
       }
     }
     config.osuSkin = osuPath;
+    HDBG("JSON") << "OSU Skin: " << config.osuSkin << std::endl;
 
     return config;
   }
