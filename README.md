@@ -18,6 +18,7 @@ Controlling hoshimi dotfiles consistently across every hoshimi dotfile.
 -   [`cmake` ](https://cmake.org/download/) - Telling ninja how to dispatch the compiler
 -   [`cJSON`](https://github.com/DaveGamble/cJSON) - JSON parsing for reading your configuration
 -   [`boost`](https://github.com/boostorg/boost) - Fast C++ libs for menial tasks
+-   [`sndfile`](https://github.com/libsndfile/libsndfile) - File library, used for compositing Pngs
 
 </details>
 

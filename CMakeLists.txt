@@ -44,8 +44,8 @@ add_compile_options(
     -fdiagnostics-color=always
 )
 
-set(HOSHIMI_VERSION "0.2.9")
-set(HOSHIMI_RELEASE_DATE "30th September")
+set(HOSHIMI_VERSION "0.3.0")
+set(HOSHIMI_RELEASE_DATE "3rd October")
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"

@@ -25,6 +25,7 @@ _hoshimi() {
         '(-p --packages)'{-p,--packages}'[Comma-separated list of packages to install or source]:packages:'
         '(-np --not-packages)'{-np,--not-packages}'[Comma-separated list of packages NOT to install or source]:packages:'
         '--no-secondary-commands[Do not do followup commands]'
+        '--max-followup-commands[Maximum number of commands the program will do before terminating]'
         '--version[Show version information]'
     )
 

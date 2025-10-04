@@ -18,10 +18,11 @@ complete -c hoshimi -s f -l force -d "Force overwrite existing files without bac
 complete -c hoshimi -s p -l packages -d "Comma-separated list of packages to install or source" -r
 complete -c hoshimi -s n -l not-packages -d "Comma-separated list of packages NOT to install or source" -r
 complete -c hoshimi -l no-secondary-commands -d "Don't do followup commands"
+complete -c hoshimi -l -maximum-followup-commands -d "Maximum number of followups a "
 complete -c hoshimi -l version -d "Show version information"
 
 # Package name completions (common Hyprland-related packages)
-set -l packages hypr,quickshell,fastfetch,ghostty,fish,foot
+set -l packages hypr,quickshell,fastfetch,ghostty,fish,foot,alacritty
 
 # Completions for -p/--packages option
 complete -c hoshimi -n "__fish_seen_subcommand_from install source" -s p -l packages -d "Packages to include" -a "(string join , $packages)"

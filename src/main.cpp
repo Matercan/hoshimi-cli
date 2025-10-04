@@ -2,11 +2,15 @@
 #include "files.hpp"
 #include "osu/osu.h"
 #include "version.h"
+#include <algorithm>
+#include <sstream>
 #include <vector>
 
 namespace fs = std::filesystem;
 std::vector<std::string> packages;
 std::vector<std::string> notPackages;
+int commandsRun = 0;
+int maxFollowupCommands;
 
 struct Flag {
   bool present;
@@ -23,6 +27,16 @@ struct Flag {
       : present(on), args(argss), description(desc) {}
 
   Flag() : present(false), description("") {}
+};
+
+enum Flags {
+  VERBOSE = 0,
+  FORCE,
+  HELP,
+  PACKAGES,
+  NOT_PACKAGES,
+  NO_COMMANDS,
+  MAX_COMMANDS
 };
 
 void print_help(const std::string &program_name,
@@ -72,12 +86,15 @@ void print_help(const std::string &program_name,
   std::cout << "    " + program_name + " source -p quickshell\n";
   std::cout << "    " + program_name + " arch-install\n";
   std::cout << "    " + program_name +
-                   " install -np hypr --no-secondary-commands\n\n";
+                   " install -np hypr --no-secondary-commands\n";
+  std::cout << "    " + program_name +
+                   " config config set catppuccin/latte -np foot "
+                   "--max-followup-commands 3\n";
 
   std::cout << "Subcommands have their own help" << std::endl;
 }
 
-void restart(std::vector<Flag> &config, char *argv[]);
+void restart(std::vector<Flag> &config);
 
 int archInstall(std::vector<Flag> &config, bool &retFlag);
 
@@ -101,7 +118,9 @@ int main(int argc, char *argv[]) {
       Flag(false, {"-np", "--not-packages"},
            "Not-Packages that you want to install"),
       Flag(false, {"--no-secondary-commands"},
-           "Don't show the secondnary commands")};
+           "Don't show the secondnary commands"),
+      Flag(false, {"--max-followup-commands"},
+           "Maximum number of followup commands to run")};
 
   // Check if we have enough arguments
   if (argc < 2) {
@@ -114,9 +133,16 @@ int main(int argc, char *argv[]) {
   std::string command = argv[1];
 
   if (command == "install") {
+    commandsRun++;
+    if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+      HLOG("Program") << "Max number of commands run, stopping before install"
+                      << std::endl;
+      return 0;
+    }
+
     FilesManager filesManager;
 
-    if (config[2].present) {
+    if (config[HELP].present) {
       std::cout << argv[0] << " install installs hoshimi dotfiles.";
       std::cout << "Dotfiles modifiable by Hoshimi config will be copied "
                    "instead of symlinked."
@@ -133,21 +159,23 @@ int main(int argc, char *argv[]) {
       return 0;
     }
 
-    if (filesManager.install_dotfiles(packages, notPackages, config[0].present,
-                                      config[3].present) != 0)
+    if (filesManager.install_dotfiles(packages, notPackages,
+                                      config[VERBOSE].present,
+                                      config[PACKAGES].present) != 0)
       return 1;
 
-    if (!config[5].present)
+    if (!config[NO_COMMANDS].present)
       sourceConfig(config);
 
     std::cout << std::endl << "Hoshimi Dotfiles installed ";
-    if (!config[1].present)
+    if (!config[FORCE].present)
       std::cout << "and files backed up";
     std::cout << "." << std::endl;
   } else if (command == "update") {
+    commandsRun++;
     FilesManager filesManager;
 
-    if (config[2].present) {
+    if (config[HELP].present) {
       std::cout << argv[0]
                 << " update updates hoshimi dotfiles to the most recent commit "
                    "on master branch."
@@ -173,7 +201,7 @@ int main(int argc, char *argv[]) {
       return 2;
     }
   } else if (command == "source") {
-    if (config[2].present) {
+    if (config[HELP].present) {
       std::cout << argv[0]
                 << " source sources the current configuration, updating the "
                    "modifiable dotfiles."
@@ -187,9 +215,17 @@ int main(int argc, char *argv[]) {
       return 0;
     }
     sourceConfig(config);
+    restart(config);
 
   } else if (command == "config") {
-    if (config[2].present) {
+    commandsRun++;
+    if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+      HLOG("Program") << "Max number of commands run, stopping before config"
+                      << std::endl;
+      return 0;
+    }
+
+    if (config[HELP].present) {
       std::cout << argv[0]
                 << " config gets or sets the config options within your "
                    "configuration."
@@ -232,14 +268,14 @@ int main(int argc, char *argv[]) {
         return 1;
       } else {
         if (!config[5].present)
-          return sourceConfig(config), 0;
+          return restart(config), 0;
       }
     } else
       std::cout << js.getJson(vec) << std::endl;
     return 0;
 
   } else if (command == "arch-install") {
-    if (config[2].present) {
+    if (config[HELP].present) {
       std::cout << argv[0]
                 << " arch-install installs all the packages neccessary for "
                    "this shell using paru."
@@ -256,7 +292,7 @@ int main(int argc, char *argv[]) {
       return retVal;
 
   } else if (command == "restart") {
-    if (config[2].present) {
+    if (config[HELP].present) {
       std::cout << argv[0]
                 << " restart (re)starts the shell and reloads terminals."
                 << std::endl;
@@ -266,18 +302,35 @@ int main(int argc, char *argv[]) {
       return 0;
     }
 
-    restart(config, argv);
+    restart(config);
 
   } else if (command == "osu-generate") {
+    commandsRun++;
+
+    if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+      HLOG("Program")
+          << "Max number nof commands run, stopping before generating osu items"
+          << std::endl;
+      return 0;
+    }
+
     genOsu();
     return 0;
 
   } else if (command == "version") {
     std::cout << "hoshimi v" << HOSHIMI_VERSION << std::endl;
-    if (config[0].present) {
+    if (config[VERBOSE].present) {
       std::cout << "Released on " << HOSHIMI_RELEASE_DATE << std::endl;
     }
-  } else if (command == "help" || config[2].present) {
+  } else if (command == "help" || config[HELP].present) {
+    commandsRun++;
+
+    if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+      HLOG("Program") << "Max number of commands run, stopping before help"
+                      << std::endl;
+      return 0;
+    }
+
     print_help(argv[0], config);
   } else {
     HERR("main") << "Unknown command: " << command << "Use '" << argv[0]
@@ -287,12 +340,23 @@ int main(int argc, char *argv[]) {
 }
 
 void sourceConfig(std::vector<Flag> config) {
-  if (config[3].present) {
+  commandsRun++;
+
+  if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+    HLOG("Program") << "Max number of commands run, stopping before sourcing"
+                    << std::endl;
+    return;
+  }
+
+  std::cout << "Packages flag active? " << config[PACKAGES].present
+            << std::endl;
+  if (config[PACKAGES].present) {
     for (size_t i = 0; i < packages.size(); ++i) {
       if (packages[i] == "ghostty") {
         GhosttyWriter gs;
         gs.writeConfig();
       } else if (packages[i] == "quickshell") {
+        genOsu();
         QuickshellWriter qs;
         qs.writeColors();
         qs.writeShell();
@@ -303,6 +367,27 @@ void sourceConfig(std::vector<Flag> config) {
         FootWriter fs;
         fs.writeConfig();
       }
+    }
+  } else if (config[NOT_PACKAGES].present) {
+    if (std::find(notPackages.begin(), notPackages.end(), "ghostty") ==
+        notPackages.end()) {
+      GhosttyWriter().writeConfig();
+    }
+    if (std::find(notPackages.begin(), notPackages.end(), "quickshell") ==
+        notPackages.end()) {
+      QuickshellWriter *qs = new QuickshellWriter();
+      genOsu();
+      qs->writeColors();
+      qs->writeShell();
+      delete qs;
+    }
+    if (std::find(notPackages.begin(), notPackages.end(), "alacritty") ==
+        notPackages.end()) {
+      AlacrittyWriter().writeConfig();
+    }
+    if (std::find(notPackages.begin(), notPackages.end(), "foot") ==
+        notPackages.end()) {
+      FootWriter().writeConfig();
     }
   } else {
     GhosttyWriter *gs = new GhosttyWriter();
@@ -316,15 +401,25 @@ void sourceConfig(std::vector<Flag> config) {
     delete fs;
 
     QuickshellWriter *qs = new QuickshellWriter();
+    genOsu();
     qs->writeColors();
     qs->writeShell();
     delete qs;
   }
 
-  if (config[5].present)
+  if (config[NO_COMMANDS].present)
     return;
   auto shellConfig = ShellHandler().getConfig();
   for (int i = 0; shellConfig.commands && shellConfig.commands[i]; ++i) {
+    commandsRun++;
+
+    if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+      HLOG("Program")
+          << "Max number of commands run, stopping before running comamnd: "
+          << shellConfig.commands[i] << std::endl;
+      return;
+    }
+
     HLOG("main") << "Running command: " << shellConfig.commands[i] << std::endl;
 
     if (system(shellConfig.commands[i]) != 0) {
@@ -359,15 +454,17 @@ void getPackageInfo(int argc, std::vector<Flag> &config, char *argv[]) {
   for (int i = 2; i < argc; ++i) {
     if (argc == 2)
       break;
-    int packagesArgument, noPackagesArgument;
+    int packagesArgument, noPackagesArgument, maxCommandsArgument;
 
     for (size_t j = 0; j < config.size(); ++j) {
       if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {
         config[j].present = !config[j].present;
-        if (j == 3)
+        if (j == PACKAGES)
           packagesArgument = ++i;
-        else if (j == 4)
+        else if (j == NOT_PACKAGES)
           noPackagesArgument = ++i;
+        else if (j == MAX_COMMANDS)
+          maxCommandsArgument = ++i;
       }
     }
 
@@ -377,11 +474,24 @@ void getPackageInfo(int argc, std::vector<Flag> &config, char *argv[]) {
     } else if (i == noPackagesArgument) {
       boost::split(notPackages, argv[i], boost::is_any_of(","),
                    boost::token_compress_on);
+    } else if (i == maxCommandsArgument) {
+      std::stringstream strValue;
+      strValue << argv[i];
+      strValue >> maxFollowupCommands;
     }
   }
 }
 
 int archInstall(std::vector<Flag> &config, bool &retFlag) {
+  commandsRun++;
+
+  if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+    HLOG("Program")
+        << "Max number of commands run, stopping before arch-install"
+        << std::endl;
+    return 0;
+  }
+
   retFlag = true;
   // Loop through all of the lnes in the lines of the file arch-packages
 
@@ -429,8 +539,15 @@ int archInstall(std::vector<Flag> &config, bool &retFlag) {
   return {};
 }
 
-void restart(std::vector<Flag> &config, char *argv[]) {
-  if (!config[5].present)
+void restart(std::vector<Flag> &config) {
+  commandsRun++;
+  if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+    HLOG("Program") << "Max number of commands run, stopping before restarting"
+                    << std::endl;
+    return;
+  }
+
+  if (!config[NO_COMMANDS].present)
     sourceConfig(config);
 
   GhosttyWriter *gs = new GhosttyWriter();
