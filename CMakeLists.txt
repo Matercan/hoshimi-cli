@@ -53,10 +53,10 @@ configure_file(
     @ONLY
 )
 
-find_package(Boost REQUIRED)
 find_package(PkgConfig REQUIRED)
-find_package(SndFile REQUIRED)
+find_package(Boost REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
+pkg_check_modules(SndFile REQUIRED sndfile)
 
 
 add_library(json_handler SHARED
@@ -93,8 +93,11 @@ target_compile_options(osu-exe PRIVATE
 target_link_libraries(osu-exe
     m
     json_handler
-    sndfile
+    ${SndFile_LIBRARIES}
 )
+
+target_include_directories(osu-exe PRIVATE ${SndFile_INCLUDE_DIRS})
+target_link_directories(osu-exe PRIVATE ${SndFile_LIBRARY_DIRS})
 
 
 add_library(osu SHARED
@@ -117,7 +120,7 @@ target_compile_options(osu PRIVATE
 target_link_libraries(osu
     m
     json_handler
-    sndfile
+    ${SndFile_LIBRARIES}
 )
 
 
@@ -142,11 +145,13 @@ target_link_libraries(hoshimi
     osu
     cjson
     m
-    sndfile
+    ${SndFile_LIBRARIES}
 )
 target_include_directories(hoshimi PRIVATE Boost::headers)
 target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
 target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
+target_include_directories(hoshimi PRIVATE ${SndFile_INCLUDE_DIRS})
+target_link_directories(hoshimi PRIVATE ${SndFile_LIBRARY_DIRS})
 
 install(TARGETS hoshimi
     RUNTIME DESTINATION bin
