@@ -19,5 +19,6 @@ flamegraph*
 
 # generated files
 **backup/
-temp*
+temp**
+tmp**
 *.png

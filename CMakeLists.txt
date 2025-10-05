@@ -131,6 +131,8 @@ add_executable(hoshimi
 )
 
 set_target_properties(hoshimi PROPERTIES
+    INSTALL_RPATH "$ORIGIN/../lib"
+    BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
 
@@ -147,11 +149,20 @@ target_link_libraries(hoshimi
     m
     ${SndFile_LIBRARIES}
 )
+
 target_include_directories(hoshimi PRIVATE Boost::headers)
 target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
 target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
 target_include_directories(hoshimi PRIVATE ${SndFile_INCLUDE_DIRS})
 target_link_directories(hoshimi PRIVATE ${SndFile_LIBRARY_DIRS})
+
+install(TARGETS json_handler
+  LIBRARY DESTINATION lib
+)
+
+install(TARGETS osu
+    LIBRARY DESTINATION lib
+)
 
 install(TARGETS hoshimi
     RUNTIME DESTINATION bin

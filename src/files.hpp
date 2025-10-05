@@ -460,8 +460,8 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      HERR("Config") << file.string() << " File opening unsuccessful"
-                     << std::endl;
+      HERR("Config " + file.string())
+          << " File opening unsuccessful" << std::endl;
     }
 
     std::string s;
@@ -481,8 +481,8 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      HERR("Config") << file.string() << " File opening unsuccessful"
-                     << std::endl;
+      HERR("Config " + file.string())
+          << " File opening unsuccessful" << std::endl;
     }
 
     std::string s;
@@ -499,7 +499,7 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config" + file.string())
+      HERR("Config " + file.string())
           << " File opening unsuccessful" << std::endl;
       return false;
     }
@@ -513,7 +513,7 @@ public:
     std::ofstream o(filePath);
 
     if (!o.is_open()) {
-      HERR("Config" + filePath) << " File opening unsuccessful" << std::endl;
+      HERR("Config " + filePath) << " File opening unsuccessful" << std::endl;
       return;
     }
 
@@ -527,7 +527,7 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config" + file.string())
+      HERR("Config " + file.string())
           << " File opening unsuccessful" << std::endl;
       return;
     }
@@ -642,12 +642,12 @@ public:
     newContents = updated_contents;
   }
 
-  bool replaceValue(std::string key, std::string value, FileType *fileType) {
-    std::string updatedContents;
-
+  bool replaceValue(const std::string &key, const std::string &value,
+                    FileType *fileType) {
     if (filetype != FileType::DEFAULT_VALUE)
       fileType = &filetype;
 
+    std::string updatedContents;
     std::string line;
     std::istringstream newContentsStream(newContents);
 
@@ -681,7 +681,84 @@ public:
     }
     if (*fileType == FileType::VALUE_PAIR) {
       while (getline(newContentsStream, line)) {
+        bool written = false;
+        if (written) {
+          updatedContents += line + "\n";
+          continue;
+        }
         if (boost::algorithm::contains(line, key)) {
+          std::string newLine;
+          std::vector<std::string> split;
+          boost::algorithm::split(split, line, boost::is_any_of("="),
+                                  boost::token_compress_on);
+
+          for (size_t i = 0; i < split.size() - 1; ++i)
+            newLine += split[i] + "=";
+
+          newLine += value;
+          updatedContents += newLine + "\n";
+          written = true;
+        } else {
+          updatedContents += line + "\n";
+        }
+      }
+    }
+
+    std::string oldContents = newContents;
+    newContents = updatedContents;
+    return newContents != oldContents;
+  }
+  bool replaceValue(std::string key, std::string value, std::string afterLine) {
+
+    auto fileType = &filetype;
+    std::string updatedContents;
+    std::string line;
+    std::istringstream newContentsStream(newContents);
+    bool foundLine = false;
+
+    if (*fileType == FileType::QS) {
+      bool written = false;
+      while (getline(newContentsStream, line)) {
+        if (written) {
+          updatedContents += line + "\n";
+          continue;
+        } else if (!foundLine) {
+          if (boost::algorithm::contains(line, afterLine)) {
+            foundLine = true;
+          }
+          updatedContents += line + "\n";
+        } else if (boost::algorithm::contains(line, key + ":")) {
+          if (line.find(":") == std::string::npos) {
+            updatedContents += line + "\n";
+            continue;
+          }
+
+          std::string newLine = "";
+          std::vector<std::string> split;
+
+          boost::algorithm::split(split, line, boost::is_any_of(":"),
+                                  boost::token_compress_on);
+
+          newLine += split[0] + ": " + value;
+          updatedContents += newLine + "\n";
+          written = true;
+          continue;
+        } else {
+          updatedContents += line + "\n";
+        }
+      }
+    } else if (*fileType == FileType::VALUE_PAIR) {
+      bool written = false;
+      while (getline(newContentsStream, line)) {
+        if (written) {
+          updatedContents += line + "\n";
+          continue;
+        } else if (!foundLine) {
+          if (boost::algorithm::contains(line, afterLine)) {
+            foundLine = true;
+          }
+          updatedContents += line + "\n";
+        } else if (boost::algorithm::contains(line, key)) {
           std::string newLine;
           std::vector<std::string> split;
           boost::algorithm::split(split, line, boost::is_any_of("="),
@@ -705,9 +782,14 @@ public:
 
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
-    if (!exit_code)
+    if (!exit_code) {
       HERR("Config " + file.string())
           << " Value of " << key << " not changed." << std::endl;
+      write("tmp/" + key + file.filename().string());
+      HLOG("Config " + file.string()) << " Current contents written to /tmp/" +
+                                             key + file.filename().string()
+                                      << std::endl;
+    }
     return exit_code;
   }
   void replaceWithChecking(std::string key, std::string value, bool &exitCode) {
@@ -715,6 +797,23 @@ public:
       HERR("Config " + file.string())
           << " Value of " << key << " not changed." << std::endl;
       exitCode = false;
+      write("tmp/" + key + file.filename().string());
+      HLOG("Config " + file.string()) << " Current contents written to tmp/" +
+                                             key + file.filename().string()
+                                      << std::endl;
+    }
+  }
+  void replaceWithChecking(std::string key, std::string value,
+                           std::string afterLine, bool &exitCode) {
+    if (!replaceValue(key, value, afterLine)) {
+      HERR("Config " + file.string())
+          << "Value of " << key << " after line containing " << afterLine
+          << " not changed. " << std::endl;
+      exitCode = false;
+      write("tmp/" + key + file.filename().string());
+      HLOG("Config " + file.string()) << " Current contents written to tmp/" +
+                                             key + file.filename().string()
+                                      << std::endl;
     }
   }
 };
@@ -998,7 +1097,6 @@ public:
   }
 };
 
-// YAML-backed writer for Alacritty
 class AlacrittyWriter {
 private:
   Colorscheme colors;
@@ -1006,6 +1104,8 @@ private:
   WriterBase writer;
 
   fs::path getAlacrittyPath() {
+    std::cout << files.findHomeEquivilent(
+        files.getdotfilesDirectory() / ".config/alacritty/themes/hoshimi.toml");
     return files.findHomeEquivilent(files.getdotfilesDirectory() /
                                     ".config/alacritty/themes/hoshimi.toml");
   }
@@ -1021,25 +1121,30 @@ public:
   bool writeConfig() {
     fs::path path = getAlacrittyPath();
 
-    bool exitCode = true;
+    // Build the file contents
+    writer.empty();
 
-    writer.replaceWithChecking(
-        "background", colors.backgroundColor.toHex(Color::FLAGS::WQUOT),
-        exitCode);
-    writer.replaceWithChecking(
-        "foreground", colors.foregroundColor.toHex(Color::FLAGS::WQUOT),
-        exitCode);
+    writer.append("# Alacritty color scheme generated by Hoshimi\n");
+    writer.append("[colors]\n");
+    writer.append("transparent_background_colors = true\n\n");
+
+    writer.append("[colors.primary]\n");
+    writer.append("background = " +
+                  colors.backgroundColor.toHex(Color::FLAGS::WQUOT) + "\n");
+    writer.append("foreground = " +
+                  colors.foregroundColor.toHex(Color::FLAGS::WQUOT) + "\n\n");
 
     // Normal colors (standard order)
     static const char *normal_names[8] = {"black", "red",     "green", "yellow",
                                           "blue",  "magenta", "cyan",  "white"};
+    writer.append("[colors.normal]\n");
     for (int i = 0; i < 8; ++i) {
       std::string hex = (i < (int)colors.palette.size())
                             ? colors.palette[i].toHex(Color::FLAGS::WQUOT)
                             : std::string("#000000");
       writer.append(std::string(normal_names[i]) + " = " + hex + "\n");
-      writer.replaceWithChecking(std::string(normal_names[i]), hex, exitCode);
     }
+    writer.append("\n");
 
     // Bright colors (palette[8..15])
     static const char *bright_names[8] = {"black", "red",     "green", "yellow",
@@ -1050,24 +1155,20 @@ public:
       std::string hex = (idx < (int)colors.palette.size())
                             ? colors.palette[idx].toHex(Color::FLAGS::WQUOT)
                             : colors.palette[i].toHex();
-      writer.replaceWithChecking(std::string(bright_names[i]), hex, exitCode);
+      writer.append(std::string(bright_names[i]) + " = " + hex + "\n");
     }
     writer.append("\n");
 
     // Write to file
     bool retVal = writer.write();
 
-    if (!retVal)
-      exitCode = false;
-
-    if (!exitCode) {
+    if (!retVal) {
       HERR("Config " + path.string()) << "Error writing to file." << std::endl;
       writer.revert();
-      exitCode = false;
+      return false;
     }
-
     reloadAlacritty();
-    return exitCode;
+    return retVal;
   }
 };
 

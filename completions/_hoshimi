@@ -14,7 +14,7 @@ _hoshimi() {
         'config:Get or set config options within your configuration'
         'source:Source current configuration, updating modifiable dotfiles'
         'restart:(re)start the shell and reload terminals'
-        'osu-generate:Generate osu items needed for the race'
+        'osugen:Generate osu items needed for the race'
     )
 
     local -a global_options
@@ -47,6 +47,7 @@ _hoshimi() {
                         '(-f --force)'{-f,--force}'[Force overwrite existing files without backup]' \
                         '(-p --packages)'{-p,--packages}'[Comma-separated list of packages]:packages:(hypr hyprland waybar fastfetch quickshell kitty rofi wofi dunst)' \
                         '(-np --not-packages)'{-np,--not-packages}'[Comma-separated list of packages NOT to install]:packages:(hypr hyprland waybar fastfetch quickshell kitty rofi wofi dunst)' \
+                        '--max-followup-commands[Maximum number of commands the program will do before terminating]'
                         '--no-secondary-commands[Do not do followup commands]'
                     ;;
                 *)

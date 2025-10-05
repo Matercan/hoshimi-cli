@@ -9,7 +9,7 @@ complete -c hoshimi -f -n __fish_use_subcommand -a update -d "Update dotfiles to
 complete -c hoshimi -f -n __fish_use_subcommand -a config -d "Get or set config options within your configuration"
 complete -c hoshimi -f -n __fish_use_subcommand -a source -d "Source current configuration, updating modifiable dotfiles"
 complete -c hoshimi -f -n __fish_use_subcommand -a restart -d "(re)start the shell and reload terminals"
-complete -c hoshimi -f -n __fish_use_subcommand -a osu-generate -d "Generate osu items needed for the race"
+complete -c hoshimi -f -n __fish_use_subcommand -a osugen -d "Generate osu items needed for the race"
 
 # Global options (available for all commands)
 complete -c hoshimi -s h -l help -d "Show help message"

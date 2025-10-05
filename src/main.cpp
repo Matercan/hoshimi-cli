@@ -61,8 +61,7 @@ void print_help(const std::string &program_name,
   std::cout << "    source        Source the current configuration, updating "
                "the modifiable dotfiles \n";
   std::cout << "    restart       (re)start the shell and reload terminals. \n";
-  std::cout
-      << "    osu-generate    generate osu items needed for the race. \n\n";
+  std::cout << "    osugen    generate osu items needed for the race. \n\n";
 
   std::cout << "OPTIONS:\n";
 
@@ -215,7 +214,6 @@ int main(int argc, char *argv[]) {
       return 0;
     }
     sourceConfig(config);
-    restart(config);
 
   } else if (command == "config") {
     commandsRun++;
@@ -267,8 +265,8 @@ int main(int argc, char *argv[]) {
             << std::endl;
         return 1;
       } else {
-        if (!config[5].present)
-          return restart(config), 0;
+        if (!config[NO_COMMANDS].present)
+          return sourceConfig(config), 0;
       }
     } else
       std::cout << js.getJson(vec) << std::endl;
@@ -303,8 +301,7 @@ int main(int argc, char *argv[]) {
     }
 
     restart(config);
-
-  } else if (command == "osu-generate") {
+  } else if (command == "osugen") {
     commandsRun++;
 
     if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
@@ -333,7 +330,7 @@ int main(int argc, char *argv[]) {
 
     print_help(argv[0], config);
   } else {
-    HERR("main") << "Unknown command: " << command << "Use '" << argv[0]
+    HERR("main") << "Unknown command: " << command << ", Use '" << argv[0]
                  << " help' to see available commands." << std::endl;
     return 1;
   }
@@ -554,7 +551,19 @@ void restart(std::vector<Flag> &config) {
   gs->reloadGhostty();
   delete gs;
 
+  commandsRun++;
+
+  if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
+    HLOG("Program")
+        << "Max number nof commands run, stopping before generating osu items"
+        << std::endl;
+    return;
+  }
+
+  genOsu();
+
   system("killall qs; \n "
          "nohup  qs > /dev/null 2>&1 &");
+
   HLOG("main") << "Hoshimi restarted" << std::endl;
 }
