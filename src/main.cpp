@@ -77,6 +77,8 @@ void print_help(const std::string &program_name,
                "list of packages NOT to install or source\n";
   std::cout << "    --no-secondary-commands                 Don't do followup "
                "commands\n";
+  std::cout << "    --max-followup-commands                 Maximum number of "
+               "followup commands before the program terminates\n";
   std::cout << "    --version                               Show version "
                "information\n\n";
 
