@@ -38,20 +38,18 @@ cmake -S . -B build -G Ninja \
   --no-warn-unused-cli
 
 # build
-cmake -- build build --config Release --target all --
-
-# (optional)
-cp build/bin/hoshimi ~/.local/bin/hoshimi
-
+cmake --build build --config Release --target all --
+sudo cmake --install build --config Release
 ```
 
 ## Usage
 ```
+❯ hoshimi help
 Hoshimi - Hyprland Dotfiles Manager
 ===================================
 
 USAGE:
-    build/bin/hoshimi <command> [options]
+    hoshimi <command> [options]
 
 COMMANDS:
     install       Install dotfiles by cloning repository and creating symlinks
@@ -60,8 +58,9 @@ COMMANDS:
     version       Get version information of hoshimi
     update        Update dotfiles to the most recent master commit
     config        Get or set the config options within your configuration
-    source        Source the current configuration, updating the modifiable dotfiles 
-    restart       (re)start the shell and reload terminals. 
+    source        Source the current configuration, updating the modifiable dotfiles
+    restart       (re)start the shell and reload terminals.
+    osugen    generate osu items needed for the race.
 
 OPTIONS:
     -h, --help                              Show this help message
@@ -70,23 +69,22 @@ OPTIONS:
     -p, --packages <pkg1,pkg2,...>          Comma-separated list of packages to install or source
     -np, --not-packages <pkg1,pkg2,...>     Comma-separated list of packages NOT to install or source
     --no-secondary-commands                 Don't do followup commands
+    --max-followup-commands                 Maximum number of followup commands before hoshimi terminates 
     --version                               Show version information
 
 
 EXAMPLES:
-    build/bin/hoshimi install -p hypr,fastfetch -v
-    build/bin/hoshimi source -p quickshell
-    build/bin/hoshimi arch-install
-    build/bin/hoshimi install -np hypr --no-secondary-commands
-
+    hoshimi install -p hypr,fastfetch -v
+    hoshimi source -p quickshell
+    hoshimi arch-install
+    hoshimi install -np hypr --no-secondary-commands
+    hoshimi config config set catppuccin/latte -np foot --max-followup-commands 3
 Subcommands have their own help
 ```
 
-build/bin/osu will also generate osu circles and hitsounds based off a skin specified in the configuration. A default is probided within the dotfiles (Teto's territory)
-
 ## Configuring (To be changed)
 
-Configuration taes place in 2 steps. The main config file is located in ~/.config/hoshimi/config.json
+Configuration takes place in 2 steps. The main config file is located in ~/.config/hoshimi/config.json
 
 The main config file sets up global variables and overrides for the theme, it also tells hoshimi which theme to use.
 
@@ -190,5 +188,6 @@ The themes are located in ~/.config/hoshimi/themes/ and can be pointed to in the
 ```
 
 </details>
+
 
 
