@@ -18,7 +18,7 @@
         "type": "string"
       }
     },
-    "special": {
+    "writers": {
       "type": "array",
       "description": "Special strings to append at the end of a writer",
       "items": {
