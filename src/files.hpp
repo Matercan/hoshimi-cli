@@ -1104,8 +1104,6 @@ private:
   WriterBase writer;
 
   fs::path getAlacrittyPath() {
-    std::cout << files.findHomeEquivilent(
-        files.getdotfilesDirectory() / ".config/alacritty/themes/hoshimi.toml");
     return files.findHomeEquivilent(files.getdotfilesDirectory() /
                                     ".config/alacritty/themes/hoshimi.toml");
   }

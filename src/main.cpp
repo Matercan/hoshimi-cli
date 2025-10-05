@@ -347,8 +347,6 @@ void sourceConfig(std::vector<Flag> config) {
     return;
   }
 
-  std::cout << "Packages flag active? " << config[PACKAGES].present
-            << std::endl;
   if (config[PACKAGES].present) {
     for (size_t i = 0; i < packages.size(); ++i) {
       if (packages[i] == "ghostty") {
