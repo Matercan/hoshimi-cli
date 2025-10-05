@@ -107,6 +107,8 @@ int save_audio(const char *path, AudioBuffer *buf) {
   }
 
   sf_count_t written = sf_writef_float(file, buf->data, buf->frames);
+  if (!written)
+    printf("Can't save audio of file %s to WAV \n", path);
   sf_close(file);
 
   return 1;

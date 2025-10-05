@@ -1,9 +1,9 @@
-#pragma once
 
 #include "../common/json/json_wrapper.h"
 
 #include "stb_image.h"
 #include "stb_image_write.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,7 +49,74 @@ void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx,
   }
 }
 
-int generateCircles() {
+struct CircleInfo {
+  const char *name;
+  int hw;
+  int hh;
+  int ow;
+  int oh;
+  int nw;
+  int nh;
+  unsigned char *hitCircle;
+  unsigned char *overlay;
+  unsigned char *number;
+  const ColorRGB *color;
+  const Config *config;
+  int num;
+};
+
+void *genCircle(void *arg) {
+  struct CircleInfo *info = (struct CircleInfo *)arg;
+  int out_w = info->hw;
+  int out_h = info->hh;
+
+  unsigned char *output = (unsigned char *)calloc(out_w * out_h * 4, 1);
+
+  if (info->num != -1) {
+
+    // Copy and tint hitcircle
+    memcpy(output, info->hitCircle, info->hw * info->hh * 4);
+    tint_image(output, info->hw, info->hh, *(info->color));
+
+    // Composite number
+    int num_x = (out_w - info->nw) / 2;
+    int num_y = (out_h - info->nh) / 2;
+    composite(output, info->number, info->nw, info->nh, num_x, num_y, out_w,
+              out_h);
+
+    // Composite overlay
+    int ov_x = (out_w - info->ow) / 2;
+    int ov_y = (out_h - info->oh) / 2;
+    composite(output, info->overlay, info->ow, info->oh, ov_x, ov_y, out_w,
+              out_h);
+
+    // Save output
+    char outname[256];
+    sprintf(outname, "%s/../osuGen/%s-%d.png", load_config()->osuSkin,
+            info->name, info->num);
+    stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
+
+  } else {
+
+    mempcpy(output, info->hitCircle, info->hw * info->hh * 4);
+    tint_image(output, info->hw, info->hh, *(info->color));
+
+    int ov_x = (out_w - info->ow) / 2;
+    int ov_y = (out_h - info->oh) / 2;
+    composite(output, info->overlay, info->ow, info->oh, ov_x, ov_y, out_w,
+              out_h);
+
+    char outname[256];
+
+    sprintf(outname, "%s/../osuGen/%s.png", info->config->osuSkin, info->name);
+    stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
+  }
+
+  free(output);
+  return NULL;
+}
+
+int generateCircles(void *foo) {
   // Load colors from JSON
   C_ColorScheme *colors = load_colorscheme();
   if (!colors) {
@@ -131,49 +198,43 @@ int generateCircles() {
 
   // Generate circles for each color and combo number 1-9
   for (int c = 0; c < num_colors; c++) {
-    int out_w = hw;
-    int out_h = hh;
-    unsigned char *output = (unsigned char *)calloc(out_w * out_h * 4, 1);
 
-    mempcpy(output, hitcircle, hw * hh * 4);
-    tint_image(output, hw, hh, colors->palette[c]);
+    struct CircleInfo *info =
+        (struct CircleInfo *)malloc(sizeof(struct CircleInfo));
+    info->name = color_names[c];
+    info->hw = hw;
+    info->hh = hh;
+    info->ow = ow;
+    info->oh = oh;
+    info->hitCircle = hitcircle;
+    info->overlay = overlay;
+    info->color = &(colors->palette[c]);
+    info->config = config;
+    info->num = -1;
 
-    int ov_x = (out_w - ow) / 2;
-    int ov_y = (out_h - oh) / 2;
-    composite(output, overlay, ow, oh, ov_x, ov_y, out_w, out_h);
-
-    char outname[256];
-
-    sprintf(outname, "%s/../osuGen/%s.png", config->osuSkin, color_names[c]);
-    stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
+    genCircle((void *)info);
+    free(info);
 
     for (int n = 1; n <= 9; n++) {
-      // Create output buffer
-      int out_w = hw;
-      int out_h = hh;
-      unsigned char *output = (unsigned char *)calloc(out_w * out_h * 4, 1);
 
-      // Copy and tint hitcircle
-      memcpy(output, hitcircle, hw * hh * 4);
-      tint_image(output, hw, hh, colors->palette[c]);
+      struct CircleInfo *info =
+          (struct CircleInfo *)malloc(sizeof(struct CircleInfo));
+      info->name = color_names[c];
+      info->hw = hw;
+      info->hh = hh;
+      info->ow = ow;
+      info->oh = oh;
+      info->nh = nh[n];
+      info->nw = nh[n];
+      info->num = n;
+      info->number = numbers[n];
+      info->hitCircle = hitcircle;
+      info->overlay = overlay;
+      info->color = &(colors->palette[c]);
+      info->config = config;
 
-      // Composite number
-      int num_x = (out_w - nw[n]) / 2;
-      int num_y = (out_h - nh[n]) / 2;
-      composite(output, numbers[n], nw[n], nh[n], num_x, num_y, out_w, out_h);
-
-      // Composite overlay
-      int ov_x = (out_w - ow) / 2;
-      int ov_y = (out_h - oh) / 2;
-      composite(output, overlay, ow, oh, ov_x, ov_y, out_w, out_h);
-
-      // Save output
-      char outname[256];
-      sprintf(outname, "%s/../osuGen/%s-%d.png", load_config()->osuSkin,
-              color_names[c], n);
-      stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
-
-      free(output);
+      genCircle(info);
+      free(info);
     }
   }
 

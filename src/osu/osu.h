@@ -4,9 +4,9 @@
 #include "circles.h"
 #include "hitsounds.h"
 
-void genOsu() {
+inline void genOsu(void *foo) {
   generateSounds(load_config()->osuSkin);
-  generateCircles();
+  generateCircles(NULL);
 }
 
 #endif
