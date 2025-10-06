@@ -84,11 +84,13 @@ Subcommands have their own help
 
 ## Configuring (To be changed)
 
-Configuration takes place in 2 steps. The main config file is located in ~/.config/hoshimi/config.json
-
+Configuration takes place in 2 steps. The main config file is located in `~/.config/hoshimi/config.json`.
 The main config file sets up global variables and overrides for the theme, it also tells hoshimi which theme to use.
+The themes are located in `~/.config/hoshimi/themes/` and can be pointed to in the main config. Each theme contains the colors, the ordering of the bar as well as the wallpaper fonts etc. 
+The themes within each directory will share the configuration of the `*.json` file in their respective directories.
 
-The themes are located in ~/.config/hoshimi/themes/ and can be pointed to in the main config. Each theme contains the colors, the ordering of the bar as well as the wallpaper fonts etc.
+For example the theme `~/.config/hoshimi/themes/catppuccin/latte.json` shares the config from `~/.config/hoshimi/themes/catppuccin/*.json` unless overriden within `catppucccin/latte.json`.
+This makes similar themes within a directory easier to manage
 
 <details><summary>Example main config</summary>
 

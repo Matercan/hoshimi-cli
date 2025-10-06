@@ -55,6 +55,7 @@ configure_file(
 
 find_package(PkgConfig REQUIRED)
 find_package(Boost REQUIRED)
+find_package(Threads REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
 pkg_check_modules(SndFile REQUIRED sndfile)
 
@@ -74,8 +75,6 @@ target_compile_options(json_handler PRIVATE
 target_link_libraries(json_handler cjson)
 target_include_directories(json_handler PRIVATE ${cJSON_INCLUDE_DIRS})
 
-
-
 add_executable(osu-exe 
     src/osu/osu_assembler.c 
     src/osu/stb_impl.c
@@ -90,11 +89,7 @@ target_compile_options(osu-exe PRIVATE
     "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
 )
 
-target_link_libraries(osu-exe
-    m
-    json_handler
-    ${SndFile_LIBRARIES}
-)
+
 
 target_include_directories(osu-exe PRIVATE ${SndFile_INCLUDE_DIRS})
 target_link_directories(osu-exe PRIVATE ${SndFile_LIBRARY_DIRS})
@@ -120,10 +115,16 @@ target_compile_options(osu PRIVATE
 target_link_libraries(osu
     m
     json_handler
+    Threads::Threads
     ${SndFile_LIBRARIES}
 )
 
-
+target_link_libraries(osu-exe
+    osu
+    m
+    json_handler
+    ${SndFile_LIBRARIES}
+)
 
 add_executable(hoshimi
     src/main.cpp
@@ -147,6 +148,7 @@ target_link_libraries(hoshimi
     osu
     cjson
     m
+    Threads::Threads
     ${SndFile_LIBRARIES}
 )
 

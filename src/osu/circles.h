@@ -196,7 +196,6 @@ int generateCircles(void *foo) {
     }
   }
 
-  // Generate circles for each color and combo number 1-9
   for (int c = 0; c < num_colors; c++) {
 
     struct CircleInfo *info =
@@ -213,7 +212,6 @@ int generateCircles(void *foo) {
     info->num = -1;
 
     genCircle((void *)info);
-    free(info);
 
     for (int n = 1; n <= 9; n++) {
 
@@ -225,7 +223,7 @@ int generateCircles(void *foo) {
       info->ow = ow;
       info->oh = oh;
       info->nh = nh[n];
-      info->nw = nh[n];
+      info->nw = nw[n];
       info->num = n;
       info->number = numbers[n];
       info->hitCircle = hitcircle;
@@ -244,6 +242,6 @@ int generateCircles(void *foo) {
   for (int i = 0; i < 10; i++)
     stbi_image_free(numbers[i]);
 
-  printf("Done! Generated %d circles.\n", num_colors * 9);
+  printf("Done! Generated %d circles.\n", num_colors * 10);
   return 0;
 }
