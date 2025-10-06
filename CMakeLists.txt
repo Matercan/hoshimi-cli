@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
 set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
@@ -20,17 +19,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(DEBUG_MODE ON)  
+  set(DEBUG_MODE ON)
   configure_file(
       "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
       "${CMAKE_CURRENT_BINARY_DIR}/config.h"
       @ONLY
-  ) 
+  )
 endif()
 
-project(osu-exe)
 project(hoshimi)
 
+# Common compile options
 add_compile_options(
     -Wall
     -Wextra
@@ -44,22 +43,27 @@ add_compile_options(
     -fdiagnostics-color=always
 )
 
-set(HOSHIMI_VERSION "0.3.0")
-set(HOSHIMI_RELEASE_DATE "3rd October")
+set(HOSHIMI_VERSION "0.3.1")
+set(HOSHIMI_RELEASE_DATE "6th October")
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/version.h"  # Generate to build dir
+    "${CMAKE_CURRENT_BINARY_DIR}/version.h"
     @ONLY
 )
 
+# Find packages once
 find_package(PkgConfig REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
 pkg_check_modules(SndFile REQUIRED sndfile)
 
+# Create stb_impl as an OBJECT library (compiled once, linked many times)
+add_library(stb_impl OBJECT src/osu/stb_impl.c)
+set_target_properties(stb_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+# json_handler library
 add_library(json_handler SHARED
     src/common/json/json.hpp
     src/common/json/json_wrapper.cpp
@@ -67,51 +71,27 @@ add_library(json_handler SHARED
 set_target_properties(json_handler PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
-target_compile_options(json_handler PRIVATE 
-    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
-    "$<${msvc_cxx}:-Wall;-Wunused;-Wformat=2>"
+target_compile_options(json_handler PRIVATE
+    "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
+    "$<${msvc_cxx}:-Wformat=2>"
 )
-
 target_link_libraries(json_handler cjson)
 target_include_directories(json_handler PRIVATE ${cJSON_INCLUDE_DIRS})
 
-add_executable(osu-exe 
-    src/osu/osu_assembler.c 
-    src/osu/stb_impl.c
-)
-
-set_target_properties(osu-exe PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-)
-
-target_compile_options(osu-exe PRIVATE 
-    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
-    "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
-)
-
-
-
-target_include_directories(osu-exe PRIVATE ${SndFile_INCLUDE_DIRS})
-target_link_directories(osu-exe PRIVATE ${SndFile_LIBRARY_DIRS})
-
-
+# osu library
 add_library(osu SHARED
     src/osu/osu.c
     src/osu/osu.h
-    src/osu/stb_impl.c
+    $<TARGET_OBJECTS:stb_impl>
 )
-
 set_target_properties(osu PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
-
 target_include_directories(osu PUBLIC src/osu)
-
-target_compile_options(osu PRIVATE 
-    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
-    "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+target_compile_options(osu PRIVATE
+    "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
+    "$<${msvc_cxx}:-Wformat=2>"
 )
-
 target_link_libraries(osu
     m
     json_handler
@@ -119,6 +99,19 @@ target_link_libraries(osu
     ${SndFile_LIBRARIES}
 )
 
+# osu-exe executable
+add_executable(osu-exe
+    src/osu/osu_assembler.c
+    $<TARGET_OBJECTS:stb_impl>
+)
+set_target_properties(osu-exe PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+target_compile_options(osu-exe PRIVATE
+    "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
+    "$<${msvc_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
+)
+target_include_directories(osu-exe PRIVATE ${SndFile_INCLUDE_DIRS})
 target_link_libraries(osu-exe
     osu
     m
@@ -126,23 +119,26 @@ target_link_libraries(osu-exe
     ${SndFile_LIBRARIES}
 )
 
+# hoshimi executable
 add_executable(hoshimi
     src/main.cpp
-    src/osu/stb_impl.c
+    $<TARGET_OBJECTS:stb_impl>
 )
-
 set_target_properties(hoshimi PROPERTIES
     INSTALL_RPATH "$ORIGIN/../lib"
     BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
-
 target_compile_options(hoshimi PRIVATE
-    "$<${gcc_like_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
-    "$<${msvc_cxx}:-Wall;-Wconversion-null;-Wunused-result;-Wunused;-Wformat=2>"
+    "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
+    "$<${msvc_cxx}:-Wformat=2>"
 )
-target_include_directories(hoshimi PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-
+target_include_directories(hoshimi PRIVATE 
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    Boost::headers
+    ${cJSON_INCLUDE_DIRS}
+    ${SndFile_INCLUDE_DIRS}
+)
 target_link_libraries(hoshimi
     json_handler
     osu
@@ -152,30 +148,8 @@ target_link_libraries(hoshimi
     ${SndFile_LIBRARIES}
 )
 
-target_include_directories(hoshimi PRIVATE Boost::headers)
-target_include_directories(hoshimi PRIVATE ${cJSON_INCLUDE_DIRS})
-target_link_directories(hoshimi PRIVATE ${cJSON_LIBRARY_DIRS})
-target_include_directories(hoshimi PRIVATE ${SndFile_INCLUDE_DIRS})
-target_link_directories(hoshimi PRIVATE ${SndFile_LIBRARY_DIRS})
-
-install(TARGETS json_handler
-  LIBRARY DESTINATION lib
-)
-
-install(TARGETS osu
-    LIBRARY DESTINATION lib
-)
-
-install(TARGETS hoshimi
-    RUNTIME DESTINATION bin
-)
-
-# Fish completions
-install(FILES completions/hoshimi.fish
-    DESTINATION share/fish/vendor_completions.d
-)
-
-# Zsh completions
-install(FILES completions/_hoshimi
-    DESTINATION share/zsh/site-functions
-)
+# Install targets
+install(TARGETS json_handler osu LIBRARY DESTINATION lib)
+install(TARGETS hoshimi RUNTIME DESTINATION bin)
+install(FILES completions/hoshimi.fish DESTINATION share/fish/vendor_completions.d)
+install(FILES completions/_hoshimi DESTINATION share/zsh/site-functions)

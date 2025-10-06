@@ -113,6 +113,7 @@ void *genCircle(void *arg) {
   }
 
   free(output);
+  free(info);
   return NULL;
 }
 
