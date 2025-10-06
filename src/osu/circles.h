@@ -196,6 +196,16 @@ int generateCircles(void *foo) {
     }
   }
 
+  pthread_t *threads = NULL;
+  pthread_attr_t *attrs = NULL;
+  int thread_count = 0;
+  int total_threads =
+      num_colors * 10; // 10 per color (1 without number + 9 with numbers)
+
+  threads = (pthread_t *)malloc(total_threads * sizeof(pthread_t));
+  attrs = (pthread_attr_t *)malloc(total_threads * sizeof(pthread_attr_t));
+
+  // Generate circles for all combo numbers and none, and all colors
   for (int c = 0; c < num_colors; c++) {
 
     struct CircleInfo *info =
@@ -211,7 +221,10 @@ int generateCircles(void *foo) {
     info->config = config;
     info->num = -1;
 
-    genCircle((void *)info);
+    pthread_attr_init(&attrs[thread_count]);
+    pthread_create(&threads[thread_count], &attrs[thread_count], genCircle,
+                   (void *)info);
+    thread_count++;
 
     for (int n = 1; n <= 9; n++) {
 
@@ -231,10 +244,24 @@ int generateCircles(void *foo) {
       info->color = &(colors->palette[c]);
       info->config = config;
 
-      genCircle(info);
-      free(info);
+      pthread_attr_init(&attrs[thread_count]);
+      pthread_create(&threads[thread_count], &attrs[thread_count], genCircle,
+                     (void *)info);
+      thread_count++;
     }
   }
+
+  // Wait for all threads to complete
+  for (int i = 0; i < thread_count; i++) {
+    pthread_join(threads[i], NULL);
+  }
+
+  // Cleanup thread resources
+  for (int i = 0; i < thread_count; i++) {
+    pthread_attr_destroy(&attrs[i]);
+  }
+  free(threads);
+  free(attrs);
 
   // Cleanup
   stbi_image_free(hitcircle);
