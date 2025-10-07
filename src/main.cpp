@@ -363,6 +363,8 @@ void sourceConfig(std::vector<Flag> config) {
       } else if (packages[i] == "foot") {
         FootWriter fs;
         fs.writeConfig();
+      } else if (packages[i] == "custom") {
+        CustomWriters().allWrite();
       }
     }
   } else if (config[NOT_PACKAGES].present) {
@@ -386,6 +388,10 @@ void sourceConfig(std::vector<Flag> config) {
         notPackages.end()) {
       FootWriter().writeConfig();
     }
+    if (std::find(notPackages.begin(), notPackages.end(), "custom") ==
+        notPackages.end()) {
+      CustomWriters().allWrite();
+    }
   } else {
     GhosttyWriter *gs = new GhosttyWriter();
     gs->writeConfig();
@@ -402,12 +408,16 @@ void sourceConfig(std::vector<Flag> config) {
     qs->writeColors();
     qs->writeShell();
     delete qs;
+
+    CustomWriters *cs = new CustomWriters();
+    cs->allWrite();
+    delete cs;
   }
 
   if (config[NO_COMMANDS].present)
     return;
   auto shellConfig = ShellHandler().getConfig();
-  for (int i = 0; shellConfig.commands && shellConfig.commands[i]; ++i) {
+  for (size_t i = 0; i < shellConfig.commands.size(); ++i) {
     commandsRun++;
 
     if (commandsRun > maxFollowupCommands && config[MAX_COMMANDS].present) {
@@ -419,7 +429,7 @@ void sourceConfig(std::vector<Flag> config) {
 
     HLOG("main") << "Running command: " << shellConfig.commands[i] << std::endl;
 
-    if (system(shellConfig.commands[i]) != 0) {
+    if (system(shellConfig.commands[i].c_str()) != 0) {
       HERR("main") << "\nFailed to run command: " << shellConfig.commands[i]
                    << std::endl;
     }

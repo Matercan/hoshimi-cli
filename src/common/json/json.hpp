@@ -3,9 +3,12 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <cjson/cJSON.h>
+#include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <ostream>
 #include <regex>
 
 #include "../colorscheme.hpp"
@@ -14,6 +17,117 @@
 namespace fs = std::filesystem;
 
 class JsonHandlerBase {
+private:
+  // Deep merge function for cJSON objects
+  // Merges 'override' into 'base', with override values taking precedence
+  void deepMergeCJSON(cJSON *base, cJSON *override) {
+    if (!base || !override)
+      return;
+    if (!cJSON_IsObject(base) || !cJSON_IsObject(override))
+      return;
+
+    cJSON *overrideItem = NULL;
+    cJSON_ArrayForEach(overrideItem, override) {
+      if (!overrideItem->string)
+        continue;
+
+      cJSON *baseItem =
+          cJSON_GetObjectItemCaseSensitive(base, overrideItem->string);
+
+      if (baseItem) {
+        // If both are objects, recursively merge
+        if (cJSON_IsObject(baseItem) && cJSON_IsObject(overrideItem)) {
+          deepMergeCJSON(baseItem, overrideItem);
+        }
+        // If both are arrays, merge array elements
+        else if (cJSON_IsArray(baseItem) && cJSON_IsArray(overrideItem)) {
+          // For arrays, we'll replace individual indices
+
+          int overrideSize = cJSON_GetArraySize(overrideItem);
+          for (int i = 0; i < overrideSize; i++) {
+            cJSON *overrideArrayItem = cJSON_GetArrayItem(overrideItem, i);
+            cJSON *baseArrayItem = cJSON_GetArrayItem(baseItem, i);
+
+            if (baseArrayItem && overrideArrayItem) {
+              // If both array elements are objects, merge them
+              if (cJSON_IsObject(baseArrayItem) &&
+                  cJSON_IsObject(overrideArrayItem)) {
+                deepMergeCJSON(baseArrayItem, overrideArrayItem);
+              } else {
+                // Append array item
+                cJSON *duplicate = cJSON_Duplicate(overrideArrayItem, true);
+                if (duplicate) {
+                  cJSON_AddItemToArray(baseItem, duplicate);
+                }
+              }
+            } else if (overrideArrayItem) {
+              // Add new array item
+              cJSON *duplicate = cJSON_Duplicate(overrideArrayItem, true);
+              if (duplicate) {
+                cJSON_AddItemToArray(baseItem, duplicate);
+                continue;
+              }
+              continue;
+            }
+          }
+        }
+        // Otherwise, replace the value
+        else {
+          cJSON *duplicate = cJSON_Duplicate(overrideItem, true);
+          if (duplicate) {
+            cJSON_ReplaceItemInObjectCaseSensitive(base, overrideItem->string,
+                                                   duplicate);
+          }
+        }
+      } else {
+        // Key doesn't exist in base, add it
+        cJSON *duplicate = cJSON_Duplicate(overrideItem, true);
+        if (duplicate) {
+          cJSON_AddItemToObject(base, overrideItem->string, duplicate);
+        }
+      }
+    }
+  }
+
+  // Load theme configuration with base config merging
+  cJSON *loadThemeConfig(const char *themeName) {
+    // Build paths
+    std::string themeDir = std::string(THEMES_PATH) + "/" + themeName;
+
+    std::vector<std::string> themeDirParts;
+    std::string defaultDirStr;
+    boost::algorithm::split(themeDirParts, themeDir, boost::is_any_of("/\\"));
+
+    for (size_t i = 0; i < themeDirParts.size() - 1; ++i) {
+      boost::algorithm::trim(themeDirParts[i]);
+      defaultDirStr += themeDirParts[i] + '/';
+    }
+
+    defaultDirStr += "*.json";
+
+    std::string themeConfigPath = themeDir + ".json";
+
+    // Start with an empty object
+    cJSON *mergedConfig = cJSON_CreateObject();
+
+    // First, load the defaults/*.json file if it exists
+    std::string defaultsFile = defaultDirStr;
+    cJSON *defaultConfig = getJsonFromFile(defaultsFile.c_str());
+    if (defaultConfig) {
+      deepMergeCJSON(mergedConfig, defaultConfig);
+      cJSON_Delete(defaultConfig);
+    }
+
+    // Then, load and merge the theme-specific config
+    cJSON *themeConfig = getJsonFromFile(themeConfigPath.c_str());
+    if (themeConfig) {
+      deepMergeCJSON(mergedConfig, themeConfig);
+      cJSON_Delete(themeConfig);
+    }
+
+    return mergedConfig;
+  }
+
 public:
   cJSON *getJsonFromFile(const char *filePath) {
     std::ifstream input(filePath, std::ios::binary);
@@ -75,15 +189,13 @@ public:
     }
 
     THEME_CONFIG_FILE = THEMES_PATH / (themeName + ".json");
-    THEME_CONFIG_JSON = getJsonFromFile(THEME_CONFIG_FILE.c_str());
+    THEME_CONFIG_JSON = loadThemeConfig(themeName.c_str());
+    const char *themeJson = cJSON_Print(THEME_CONFIG_JSON);
+    std::ofstream o("tmp/theme.json");
+    o << themeJson;
   }
 
   std::string getThemePath() { return THEME_CONFIG_FILE.string(); }
-
-  ~JsonHandlerBase() {
-    cJSON_free(MAIN_CONFIG_JSON);
-    cJSON_free(THEME_CONFIG_JSON);
-  }
 
 protected:
   fs::path CONFIG_DIRECTORY_PATH;
@@ -105,15 +217,22 @@ public:
     mainConfig = MAIN_CONFIG_JSON;
   }
 
+  struct CustomWriter {
+    std::filesystem::path file;
+    int linesDeleted = 0;
+    std::vector<std::string> linesAdded;
+  };
+
   struct Config {
-    fs::path wallpaper;
-    char **commands = nullptr;
-    fs::path osuSkin;
+    std::string wallpaper;
+    std::string osuSkin;
+    std::vector<std::string> commands;
+    std::vector<CustomWriter> writers;
+    // ... any other fields you have in Config
   };
 
   Config getConfig() {
     Config config;
-    // Safe accessors
 
     auto getObj = [&](cJSON *parent, const char *key) -> cJSON * {
       if (!parent)
@@ -124,107 +243,101 @@ public:
     auto getString = [&](cJSON *parent, const char *key) -> std::string {
       cJSON *it = getObj(parent, key);
       if (!it || !cJSON_IsString(it) || !it->valuestring)
-        return std::string();
-      return std::string(it->valuestring);
+        return "";
+      const char *s = cJSON_GetStringValue(it);
+      return s ? std::string(s) : std::string();
     };
 
-    auto trim = [&](std::string &str) {
-      const auto strEnd = str.find_last_not_of('/');
-      const auto strBegin = 0;
-      const auto strRange = strEnd - strBegin + 1;
-
-      str = str.substr(strBegin, strRange);
+    auto trimTrailingSlashes = [&](std::string &s) {
+      while (!s.empty() && s.back() == '/')
+        s.pop_back();
     };
 
     std::string wallpaper = getString(themeConfig, "wallpaper");
     cJSON *globals = getObj(mainConfig, "globals");
     std::string wallpaperDirectory = getString(globals, "wallpaperDirectory");
-    trim(wallpaperDirectory);
+    trimTrailingSlashes(wallpaperDirectory);
 
-    // Helper function to check if file exists
-    auto fileExists = [](const std::string &path) {
-      return fs::exists(path) && fs::is_regular_file(path);
-    };
-
-    // Try different wallpaper paths in order of preference
-    std::vector<std::string> possiblePaths = {
-        wallpaperDirectory + wallpaper, // wallpaperDirectory + filename
-        "~/.local/share/hoshimi/assets/wallpapers/" +
-            wallpaper, // default hoshimi assets
-        wallpaper      // absolute path or relative to current dir
-    };
-
-    // Expand ~ to home directory
+    // expand ~
     const char *home = getenv("HOME");
     if (home) {
-      for (auto &path : possiblePaths) {
-        if (path.find("~/", 0) == 0) {
-          path = std::string(home) + path.substr(1);
-        }
+      if (wallpaperDirectory.rfind("~/", 0) == 0) {
+        wallpaperDirectory = std::string(home) + wallpaperDirectory.substr(1);
       }
     }
 
-    // Find the first existing file
+    std::vector<std::string> possiblePaths = {
+        wallpaperDirectory + wallpaper,
+        std::string(home ? home : "") +
+            "/.local/share/hoshimi/assets/wallpapers/" + wallpaper,
+        wallpaper};
+
+    auto fileExists = [&](const std::string &p) {
+      try {
+        return fs::exists(p) && fs::is_regular_file(p);
+      } catch (...) {
+        return false;
+      }
+    };
+
     bool found = false;
-    for (const auto &path : possiblePaths) {
-      if (fileExists(path)) {
-        config.wallpaper = path;
+    for (auto &p : possiblePaths) {
+      if (!p.empty() && fileExists(p)) {
+        config.wallpaper = p;
         found = true;
         break;
       }
     }
+    if (!found)
+      config.wallpaper = "";
 
-    if (!found) {
-      HERR("JSON") << "Warning: Wallpaper not found. Tried:" << std::endl;
-      for (const auto &path : possiblePaths) {
-        HLOG("JSON") << "\t" << path << std::endl;
-      }
-      config.wallpaper = ""; // or set a default wallpaper
-    }
-
-    // Get commands array
+    // commands (safe)
     cJSON *commandsJson = getObj(THEME_CONFIG_JSON, "commands");
-    bool commandsExist = cJSON_IsArray(commandsJson);
-
-    if (commandsExist) {
-
-      int i = 0;
-      for (auto *cmd = commandsJson->child; cmd != NULL; cmd = cmd->next) {
+    if (commandsJson && cJSON_IsArray(commandsJson)) {
+      for (cJSON *cmd = commandsJson->child; cmd; cmd = cmd->next) {
         if (cJSON_IsString(cmd) && cmd->valuestring) {
-          HDBG("JSON") << cmd->valuestring << std::endl;
-
-          config.commands =
-              (char **)realloc(config.commands, (i + 2) * sizeof(char *));
-          if (!config.commands) {
-            // Handle allocation failure
-            HERR("JSON") << "Memory allocation failed for commands."
-                         << std::endl;
-            continue;
-          }
-
-          config.commands[i] = strdup(cmd->valuestring);
-          config.commands[i + 1] = nullptr; // Always null-terminate
-
-          HDBG("JSON") << config.commands[i] << std::endl;
-          ++i;
+          config.commands.emplace_back(cmd->valuestring);
         }
       }
     }
 
-    std::string osuPath = getString(globals, "osuSkin");
-    trim(osuPath);
+    // writers (safe)
+    cJSON *writersJson = getObj(THEME_CONFIG_JSON, "writers");
+    if (writersJson && cJSON_IsArray(writersJson)) {
+      for (cJSON *writer = writersJson->child; writer; writer = writer->next) {
+        if (!cJSON_IsObject(writer))
+          continue;
+        CustomWriter cw;
 
-    if (home) {
-      if (osuPath.find("~/", 0) == 0) {
-        osuPath = std::string(home) + osuPath.substr(1);
+        std::string file = getString(writer, "file");
+        trimTrailingSlashes(file);
+        // expand ~ for writer.file too if desired:
+        if (home && file.rfind("~/", 0) == 0)
+          file = std::string(home) + file.substr(1);
+        cw.file = std::filesystem::path(file);
+
+        cJSON *linesDeletedItem = cJSON_GetObjectItem(writer, "linesDeleted");
+        cw.linesDeleted = linesDeletedItem ? linesDeletedItem->valueint : 0;
+
+        cJSON *linesArray = cJSON_GetObjectItem(writer, "lines");
+        if (linesArray && cJSON_IsArray(linesArray)) {
+          for (cJSON *line = linesArray->child; line; line = line->next) {
+            if (cJSON_IsString(line) && line->valuestring) {
+              cw.linesAdded.emplace_back(line->valuestring);
+            }
+          }
+        }
+
+        config.writers.push_back(std::move(cw));
       }
     }
 
-    cJSON_free(commandsJson);
-    cJSON_free(globals);
-
+    // osu skin
+    std::string osuPath = getString(globals, "osuSkin");
+    trimTrailingSlashes(osuPath);
+    if (home && osuPath.rfind("~/", 0) == 0)
+      osuPath = std::string(home) + osuPath.substr(1);
     config.osuSkin = osuPath;
-    HDBG("JSON") << "OSU Skin: " << config.osuSkin << std::endl;
 
     return config;
   }
@@ -274,8 +387,8 @@ public:
     Color backgroundColor = bgStr.empty() ? Color("#000000") : Color(bgStr);
     Color foregroundColor = fgStr.empty() ? Color("#ffffff") : Color(fgStr);
 
-    // Safer default value handling (note: JSON stores 1-based indexes in theme
-    // files)
+    // Safer default value handling (note: JSON stores 1-based indexes in
+    // theme files)
     int activeColorIdx = getInt(colors, "activeColor", 1) - 1;
     int selectedColorIdx = getInt(colors, "selectedColor", 2) - 1;
     int iconColorIdx = getInt(colors, "iconColor", 3) - 1;

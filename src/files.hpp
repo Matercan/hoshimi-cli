@@ -570,6 +570,36 @@ public:
     newContents = updated_contents;
   }
 
+  int lineCount() {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updatedContents;
+
+    int count = 0;
+    while (std::getline(stream, line_content)) {
+      ++count;
+    }
+
+    return count;
+  }
+
+  void endEmpty(const int &line) {
+    std::istringstream stream(newContents);
+    std::string line_content;
+    std::string updatedContents;
+
+    int count = 1;
+    int totalcount = lineCount();
+    while (std::getline(stream, line_content)) {
+      if (count - 1 == totalcount - line) {
+      } else {
+        updatedContents += line_content + "\n";
+      }
+      ++count;
+    }
+    newContents = updatedContents;
+  }
+
   // Append contents to file
   void append(std::string text) { newContents += text; }
   void append(const char *text) { newContents += std::string(text); }
@@ -891,12 +921,10 @@ public:
   bool writeShell() {
     bool exitCode = true;
 
-    shellWriter->replaceWithChecking(
-        "wallpaper", "\"" + config.wallpaper.string() + "\"", exitCode);
+    shellWriter->replaceWithChecking("wallpaper",
+                                     "\"" + config.wallpaper + "\"", exitCode);
     shellWriter->replaceValue(
-        "osuDirectory",
-        "\"" + (config.osuSkin.parent_path() / "osuGen").string() + "\"",
-        nullptr);
+        "osuDirectory", "\"" + config.osuSkin + "/../osuGen" + "\"", nullptr);
 
     if (!shellWriter->write()) {
       exitCode = false;
@@ -1167,6 +1195,40 @@ public:
     }
     reloadAlacritty();
     return retVal;
+  }
+};
+
+class CustomWriters {
+private:
+  std::vector<ShellHandler::CustomWriter> writers;
+  std::vector<WriterBase> realWriters;
+
+  void write(int writerIdx) {
+    WriterBase writer = realWriters[writerIdx];
+
+    writer.endEmpty(writers[writerIdx].linesDeleted);
+    std::stringstream str;
+    auto &added = writers[writerIdx].linesAdded;
+
+    std::copy(added.begin(), added.end(),
+              std::ostream_iterator<std::string>(str, "\n"));
+
+    writer.append(str.str());
+    writer.write();
+  }
+
+public:
+  CustomWriters() {
+    writers = ShellHandler().getConfig().writers;
+
+    for (size_t i = 0; i < writers.size(); ++i)
+      realWriters.push_back(WriterBase(writers[i].file));
+  }
+
+  void allWrite() {
+    for (size_t i = 0; i < writers.size(); ++i) {
+      write(i);
+    }
   }
 };
 

@@ -14,26 +14,24 @@ Config *load_config(void) {
       return nullptr;
 
     // Copy wallpaper path
-    std::string wallpaperStr = cppConfig.wallpaper.string();
+    std::string wallpaperStr = cppConfig.wallpaper;
     cConfig->wallpaper = strdup(wallpaperStr.c_str());
 
     // Copy commands array
-    if (cppConfig.commands) {
+    if (!cppConfig.commands.empty()) {
       // Count commands
-      int count = 0;
-      while (cppConfig.commands[count] != nullptr)
-        count++;
+      int count = cppConfig.commands.size();
 
       cConfig->commands = (char **)malloc(sizeof(char *) * (count + 1));
       for (int i = 0; i < count; i++) {
-        cConfig->commands[i] = strdup(cppConfig.commands[i]);
+        cConfig->commands[i] = strdup(cppConfig.commands[i].c_str());
       }
       cConfig->commands[count] = nullptr;
     } else {
       cConfig->commands = nullptr;
     }
 
-    std::string osuSkinStr = cppConfig.osuSkin.string();
+    std::string osuSkinStr = cppConfig.osuSkin;
     cConfig->osuSkin = strdup(osuSkinStr.c_str());
 
     return cConfig;
