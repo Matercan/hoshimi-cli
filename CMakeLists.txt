@@ -44,7 +44,7 @@ add_compile_options(
 )
 
 set(HOSHIMI_VERSION "0.3.1")
-set(HOSHIMI_RELEASE_DATE "6th October")
+set(HOSHIMI_RELEASE_DATE "7th October")
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
