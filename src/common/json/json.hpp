@@ -65,9 +65,8 @@ private:
               cJSON *duplicate = cJSON_Duplicate(overrideArrayItem, true);
               if (duplicate) {
                 cJSON_AddItemToArray(baseItem, duplicate);
-                continue;
               }
-              continue;
+              cJSON_free(overrideArrayItem);
             }
           }
         }
@@ -217,6 +216,11 @@ public:
     mainConfig = MAIN_CONFIG_JSON;
   }
 
+  ~ShellHandler() {
+    cJSON_free(themeConfig);
+    cJSON_free(mainConfig);
+  }
+
   struct CustomWriter {
     std::filesystem::path file;
     int linesDeleted = 0;
@@ -228,7 +232,6 @@ public:
     std::string osuSkin;
     std::vector<std::string> commands;
     std::vector<CustomWriter> writers;
-    // ... any other fields you have in Config
   };
 
   Config getConfig() {
@@ -354,6 +357,8 @@ public:
       throw std::runtime_error("Nonexistant 'colors' object");
     }
   }
+
+  ~ColorsHandler() { cJSON_free(colors); }
 
   Colorscheme getColors() {
 
