@@ -1213,7 +1213,6 @@ private:
     std::copy(added.begin(), added.end(),
               std::ostream_iterator<std::string>(str, "\n"));
 
-    std::cout << str.str() << std::endl;
     writer.append(str.str());
     writer.write();
   }
