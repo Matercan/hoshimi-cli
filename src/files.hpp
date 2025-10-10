@@ -591,7 +591,7 @@ public:
     int count = 1;
     int totalcount = lineCount();
     while (std::getline(stream, line_content)) {
-      if (count - 1 == totalcount - line) {
+      if (count - 2 == totalcount - line) {
       } else {
         updatedContents += line_content + "\n";
       }
@@ -1213,6 +1213,7 @@ private:
     std::copy(added.begin(), added.end(),
               std::ostream_iterator<std::string>(str, "\n"));
 
+    std::cout << str.str() << std::endl;
     writer.append(str.str());
     writer.write();
   }
