@@ -33,10 +33,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "linesDeleted": {
-            "type": "integer",
-            "description": "The lines at the end of the file to be deleted"
           }
         }
       }

@@ -223,7 +223,6 @@ public:
 
   struct CustomWriter {
     std::filesystem::path file;
-    int linesDeleted = 0;
     std::vector<std::string> linesAdded;
   };
 
@@ -318,9 +317,6 @@ public:
         if (home && file.rfind("~/", 0) == 0)
           file = std::string(home) + file.substr(1);
         cw.file = std::filesystem::path(file);
-
-        cJSON *linesDeletedItem = cJSON_GetObjectItem(writer, "linesDeleted");
-        cw.linesDeleted = linesDeletedItem ? linesDeletedItem->valueint : 0;
 
         cJSON *linesArray = cJSON_GetObjectItem(writer, "lines");
         if (linesArray && cJSON_IsArray(linesArray)) {

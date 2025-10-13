@@ -1,15 +1,23 @@
+#ifndef COLORS_H
+#define COLORS_H
+
+#include <cstdint>
 #include <inttypes.h>
 #include <iomanip>
 #include <ios>
 #include <string>
 #include <vector>
 
+#define BLACK Color("#0")
+#define WHITE Color("#ffffff")
+
 class Color {
 public:
   int r;
   int g;
   int b;
-  enum FLAGS { NHASH, WQUOT, NOFLAGS };
+
+  enum FLAGS { NOFLAGS = 0, NHASH = 1 << 0, WQUOT = 1 << 2, RGB = 1 << 3 };
 
   Color() : r(0), g(0), b(0) {}
   Color(uint8_t red, uint8_t green, uint8_t blue) : r(red), g(green), b(blue) {}
@@ -68,25 +76,45 @@ public:
     std::stringstream ss;
 
     // If WQUOT, open with a quote
-    if (flag == FLAGS::WQUOT)
+    if (flag & FLAGS::WQUOT)
       ss << '"';
 
-    // If not NHASH, include the leading '#'
-    if (flag != FLAGS::NHASH)
-      ss << '#';
+    if (flag & FLAGS::RGB) {
+      ss << r << ",";
+      ss << g << ",";
+      ss << b;
 
-    // Ensure we print two hex digits per color component with leading zeros
-    ss << std::hex << std::setfill('0') << std::nouppercase;
-    ss << std::setw(2) << (static_cast<int>(r) & 0xFF);
-    ss << std::setw(2) << (static_cast<int>(g) & 0xFF);
-    ss << std::setw(2) << (static_cast<int>(b) & 0xFF);
+    } else { // If not NHASH, include the leading '#'
+      if (!(flag & FLAGS::NHASH))
+        ss << '#';
+
+      // Ensure we print two hex digits per color component with leading zeros
+      ss << std::hex << std::setfill('0') << std::nouppercase;
+      ss << std::setw(2) << (static_cast<int>(r) & 0xFF);
+      ss << std::setw(2) << (static_cast<int>(g) & 0xFF);
+      ss << std::setw(2) << (static_cast<int>(b) & 0xFF);
+    }
 
     // Close quote if requested
-    if (flag == FLAGS::WQUOT)
+    if (flag & FLAGS::WQUOT)
       ss << '"';
 
     return ss.str();
   }
+
+  Color mix(const Color &other, const float &percentage) const {
+    uint8_t nR = this->r + (other.r - this->r) * percentage;
+    uint8_t nG = this->g + (other.g - this->g) * percentage;
+    uint8_t nB = this->b + (other.b - this->b) * percentage;
+
+    return Color(nR, nG, nB);
+  }
+
+  Color lighten(const float &percentage) const {
+    return mix(WHITE, percentage);
+  }
+
+  Color darken(const float &percentage) const { return mix(BLACK, percentage); }
 
   bool operator==(const Color &other) const {
     return this->toHex() == other.toHex();
@@ -161,3 +189,5 @@ public:
     palette[15] = Color("#ffffff");
   }
 };
+
+#endif // COLORS_H

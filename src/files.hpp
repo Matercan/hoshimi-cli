@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <mutex>
+#include <ostream>
 #include <string>
 #include <thread>
 
@@ -36,8 +37,6 @@ public:
   }
 
 private:
-  Utils utils;
-
   std::string HOSHIMI_HOME;
   std::string HOME;
   fs::path DOTFILES_DIRECTORY;
@@ -99,7 +98,7 @@ private:
 
     // Clear progress bar before verbose output
     if (progress_bar_active && verbose) {
-      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ')
+      std::cout << "\r" << std::string(Utils::getTerminalSize().ws_col, ' ')
                 << "\r";
       progress_bar_active = false;
     }
@@ -249,7 +248,7 @@ private:
                         << "%)" << "." << std::endl;
       } else if (processed <= total_files) { // Add bounds check
         float progress = (float)processed / total_files;
-        utils.print_progress_bar(progress, processed, total_files);
+        Utils::print_progress_bar(progress, processed, total_files);
         progress_bar_active = true;
       }
     }
@@ -435,7 +434,7 @@ public:
 
     // Clear progress bar at the end
     if (progress_bar_active) {
-      std::cout << "\r" << std::string(utils.getTerminalSize().ws_col, ' ')
+      std::cout << "\r" << std::string(Utils::getTerminalSize().ws_col, ' ')
                 << "\r";
       std::cout.flush();
     }
@@ -452,7 +451,7 @@ private:
   FileType filetype;
 
 public:
-  std::string Contents() { return newContents; }
+  std::string contents() { return newContents; }
 
   WriterBase(fs::path writingFile) {
     file = writingFile;
@@ -568,36 +567,6 @@ public:
     }
 
     newContents = updated_contents;
-  }
-
-  int lineCount() {
-    std::istringstream stream(newContents);
-    std::string line_content;
-    std::string updatedContents;
-
-    int count = 0;
-    while (std::getline(stream, line_content)) {
-      ++count;
-    }
-
-    return count;
-  }
-
-  void endEmpty(const int &line) {
-    std::istringstream stream(newContents);
-    std::string line_content;
-    std::string updatedContents;
-
-    int count = 1;
-    int totalcount = lineCount();
-    while (std::getline(stream, line_content)) {
-      if (count - 2 == totalcount - line) {
-      } else {
-        updatedContents += line_content + "\n";
-      }
-      ++count;
-    }
-    newContents = updatedContents;
   }
 
   // Append contents to file
@@ -1198,36 +1167,82 @@ public:
   }
 };
 
-class CustomWriters {
-private:
-  std::vector<ShellHandler::CustomWriter> writers;
-  std::vector<WriterBase> realWriters;
+class CustomWriter : public WriterBase {
+  ShellHandler::CustomWriter writer;
+  std::string denoter;
 
-  void write(int writerIdx) {
-    WriterBase writer = realWriters[writerIdx];
+  enum CommentType { LUA, C_LIKE, ASM_LIKE };
 
-    writer.endEmpty(writers[writerIdx].linesDeleted);
+  CommentType commentType;
+
+  void revertFile() {
+    std::istringstream stream(contents());
+    std::string line_content;
+    std::string updated_contents;
+
+    while (getline(stream, line_content)) {
+      if (Utils::endsWith(line_content, denoter)) {
+        break;
+      }
+      updated_contents += line_content + "\n";
+    }
+
+    if (commentType == CommentType::LUA)
+      updated_contents += "-- ";
+    else if (commentType == CommentType::C_LIKE)
+      updated_contents += "// ";
+    else if (commentType == CommentType::ASM_LIKE)
+      updated_contents += "# ";
+
+    updated_contents += denoter + "\n";
+
+    empty();
+    append(updated_contents);
+  }
+
+  void addContents() {
     std::stringstream str;
-    auto &added = writers[writerIdx].linesAdded;
-
-    std::copy(added.begin(), added.end(),
+    std::copy(writer.linesAdded.begin(), writer.linesAdded.end(),
               std::ostream_iterator<std::string>(str, "\n"));
 
-    writer.append(str.str());
-    writer.write();
+    append(str.str());
   }
+
+  void writeContents() { write(); }
+
+public:
+  void writeFile() {
+    revertFile();
+    addContents();
+    write();
+  }
+
+  CustomWriter(ShellHandler::CustomWriter writer, std::string denoter)
+      : WriterBase(writer.file), writer(writer), denoter(std::move(denoter)) {
+    if (Utils::endsWith(writer.file, ".lua"))
+      commentType = CommentType::LUA;
+    else if (Utils::endsWith(writer.file, ".qml"))
+      commentType = CommentType::C_LIKE;
+    else
+      commentType = CommentType::ASM_LIKE;
+  }
+};
+
+class CustomWriters {
+private:
+  std::vector<CustomWriter> writers;
 
 public:
   CustomWriters() {
-    writers = ShellHandler().getConfig().writers;
+    auto tmpWriters = ShellHandler().getConfig().writers;
 
-    for (size_t i = 0; i < writers.size(); ++i)
-      realWriters.push_back(WriterBase(writers[i].file));
+    for (size_t i = 0; i < tmpWriters.size(); ++i)
+      writers.push_back(CustomWriter(tmpWriters[i], "Written by hoshimi"));
   }
 
   void allWrite() {
     for (size_t i = 0; i < writers.size(); ++i) {
-      write(i);
+      writers[i].writeFile();
     }
   }
 };

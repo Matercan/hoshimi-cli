@@ -31,13 +31,13 @@ public:
 
 class Utils {
 public:
-  struct winsize getTerminalSize() {
+  static struct winsize getTerminalSize() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     return w;
   }
 
-  void print_progress_bar(float progress, size_t current, size_t total) {
+  static void print_progress_bar(float progress, size_t current, size_t total) {
     int terminal_width = getTerminalSize().ws_col;
     progress = std::max(0.0f, std::min(1.0f, progress));
 
@@ -78,6 +78,19 @@ public:
 
     std::cout.flush();
     fflush(stdout); // Force flush the output
+  }
+
+  static bool endsWith(const std::string &fullString,
+                       const std::string &ending) {
+    // Check if the ending string is longer than the full
+    // string
+    if (ending.size() > fullString.size())
+      return false;
+
+    // Compare the ending of the full string with the target
+    // ending
+    return fullString.compare(fullString.size() - ending.size(), ending.size(),
+                              ending) == 0;
   }
 
   std::vector<std::string> COLOR_NAMES = {

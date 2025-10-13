@@ -59,6 +59,7 @@ find_package(Threads REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
 pkg_check_modules(SndFile REQUIRED sndfile)
 
+
 # Create stb_impl as an OBJECT library (compiled once, linked many times)
 add_library(stb_impl OBJECT src/osu/stb_impl.c)
 set_target_properties(stb_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
