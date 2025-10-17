@@ -1,6 +1,7 @@
 #ifndef COLORS_H
 #define COLORS_H
 
+#include <algorithm>
 #include <cstdint>
 #include <inttypes.h>
 #include <iomanip>
@@ -17,7 +18,13 @@ public:
   int g;
   int b;
 
-  enum FLAGS { NOFLAGS = 0, NHASH = 1 << 0, WQUOT = 1 << 2, RGB = 1 << 3 };
+  enum FLAGS {
+    NOFLAGS = 0,
+    NHASH = 1 << 0,
+    WQUOT = 1 << 2,
+    RGB = 1 << 3,
+    SPCSEP = 1 << 4
+  };
 
   Color() : r(0), g(0), b(0) {}
   Color(uint8_t red, uint8_t green, uint8_t blue) : r(red), g(green), b(blue) {}
@@ -72,7 +79,7 @@ public:
   }
 
   // Convert to hex string
-  std::string toHex(const FLAGS &flag = FLAGS::NOFLAGS) const {
+  std::string toHex(const int &flag = FLAGS::NOFLAGS) const {
     std::stringstream ss;
 
     // If WQUOT, open with a quote
@@ -81,7 +88,9 @@ public:
 
     if (flag & FLAGS::RGB) {
       ss << r << ",";
+      ss << (flag & FLAGS::SPCSEP) ? " " : "";
       ss << g << ",";
+      ss << (flag & FLAGS::SPCSEP) ? " " : "";
       ss << b;
 
     } else { // If not NHASH, include the leading '#'
@@ -91,7 +100,9 @@ public:
       // Ensure we print two hex digits per color component with leading zeros
       ss << std::hex << std::setfill('0') << std::nouppercase;
       ss << std::setw(2) << (static_cast<int>(r) & 0xFF);
+      ss << (flag & FLAGS::SPCSEP) ? " " : "";
       ss << std::setw(2) << (static_cast<int>(g) & 0xFF);
+      ss << (flag & FLAGS::SPCSEP) ? " " : "";
       ss << std::setw(2) << (static_cast<int>(b) & 0xFF);
     }
 
@@ -107,7 +118,9 @@ public:
     uint8_t nG = this->g + (other.g - this->g) * percentage;
     uint8_t nB = this->b + (other.b - this->b) * percentage;
 
-    return Color(nR, nG, nB);
+    return Color(std::max(std::min(255, (int)nR), 0),
+                 std::max(std::min(255, (int)nG), 0),
+                 std::max(std::min(255, (int)nB), 0));
   }
 
   Color lighten(const float &percentage) const {
@@ -139,12 +152,13 @@ public:
   Color errorColor;
   Color passwordColor;
   Color borderColor;
+  Color highlightColor;
 
   std::vector<Color> palette;
   std::vector<Color> main;
 
   Colorscheme() {}
-  Colorscheme(Color mainColors[8], std::vector<Color> paletteColors) {
+  Colorscheme(Color mainColors[9], std::vector<Color> paletteColors) {
     palette = paletteColors;
 
     backgroundColor = mainColors[0];
@@ -156,12 +170,18 @@ public:
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
 
-    main.reserve(8);
+    if (mainColors[8] != NULL)
+      highlightColor = mainColors[8];
+    else
+      highlightColor = selectedColor.lighten(0.2);
+
     for (int i = 0; i < 8; i++)
       main.push_back(mainColors[i]);
+
+    main.push_back(highlightColor);
   }
 
-  Colorscheme(Color mainColors[8]) {
+  Colorscheme(Color mainColors[9]) {
     backgroundColor = mainColors[0];
     foregroundColor = mainColors[1];
     selectedColor = mainColors[2];
@@ -170,6 +190,10 @@ public:
     errorColor = mainColors[5];
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
+    if (mainColors[8] != NULL)
+      highlightColor = mainColors[8];
+    else
+      highlightColor = selectedColor.lighten(0.2);
 
     palette[0] = Color("#0");
     palette[1] = Color("#8");

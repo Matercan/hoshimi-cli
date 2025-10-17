@@ -1,27 +1,38 @@
+#include "common/colorscheme.hpp"
 #include "common/json/json.hpp"
 #include "common/utils.hpp"
+#include <boost/algorithm/string/constants.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <mutex>
 #include <ostream>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace fs = std::filesystem;
 
-enum FileType { QS, VALUE_PAIR, DEFAULT_VALUE };
+enum FileType {
+  QS,
+  VALUE_PAIR,
+  CSS,
+  DEFAULT_VALUE,
+};
 
 class FilesManager {
 public:
-  fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
-  fs::path getQuickshellFolder() {
+  static fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
+  static fs::path getQuickshellFolder() {
     return DOTFILES_DIRECTORY / ".config/quickshell/";
   }
-  fs::path findHomeEquivilent(fs::path dotfile) {
+  static fs::path findHomeEquivilent(fs::path dotfile) {
     return HOME / findDotfilesRelativePath(dotfile);
   }
 
-  bool isModifiable(fs::path dotfile) {
+  static bool isModifiable(fs::path dotfile) {
     std::ifstream f(dotfile.string());
 
     if (!f.is_open()) {
@@ -37,12 +48,12 @@ public:
   }
 
 private:
-  std::string HOSHIMI_HOME;
-  std::string HOME;
-  fs::path DOTFILES_DIRECTORY;
-  fs::path BACKUP_DIRECTORY;
+  static std::string HOSHIMI_HOME;
+  static std::string HOME;
+  static fs::path DOTFILES_DIRECTORY;
+  static fs::path BACKUP_DIRECTORY;
 
-  fs::path findDotfilesRelativePath(const fs::path &dotfile) {
+  static fs::path findDotfilesRelativePath(const fs::path &dotfile) {
     std::vector<std::string> path;
     boost::algorithm::split(path, dotfile.string(), boost::is_any_of("/"),
                             boost::token_compress_on);
@@ -441,7 +452,7 @@ public:
 
     return 0;
   }
-};
+} typedef file_t;
 
 class WriterBase {
 private:
@@ -702,6 +713,28 @@ public:
         }
       }
     }
+    if (*fileType == FileType::CSS) {
+      while (getline(newContentsStream, line)) {
+        bool written = false;
+        if (written) {
+          updatedContents += line + "\n";
+          continue;
+        }
+        if (boost::algorithm::contains(line, key)) {
+          std::string newLine;
+          std::vector<std::string> split;
+          boost::algorithm::split(split, line, boost::is_any_of(":"),
+                                  boost::token_compress_on);
+
+          newLine += split[0] + ": " + value;
+          updatedContents += newLine + "\n";
+          written = true;
+          continue;
+        } else {
+          updatedContents += line + "\n";
+        }
+      }
+    }
 
     std::string oldContents = newContents;
     newContents = updatedContents;
@@ -823,20 +856,19 @@ private:
   ShellHandler::Config config;
   WriterBase *colorsWriter;
   WriterBase *shellWriter;
-  FilesManager files;
 
 public:
   QuickshellWriter() {
     colors = ColorsHandler().getColors();
     config = ShellHandler().getConfig();
-    colorsWriter =
-        new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() /
-                                                "functions/Colors.qml"),
-                       FileType::QS);
-    shellWriter =
-        new WriterBase(files.findHomeEquivilent(files.getQuickshellFolder() /
-                                                "globals/Variables.qml"),
-                       FileType::QS);
+    colorsWriter = new WriterBase(
+        file_t::findHomeEquivilent(file_t::getQuickshellFolder() /
+                                   "functions/Colors.qml"),
+        FileType::QS);
+    shellWriter = new WriterBase(
+        file_t::findHomeEquivilent(file_t::getQuickshellFolder() /
+                                   "globals/Variables.qml"),
+        FileType::QS);
   }
 
   ~QuickshellWriter() {
@@ -845,7 +877,7 @@ public:
   }
 
   bool writeColors() {
-    if (!files.isModifiable(colorsWriter->getFile())) {
+    if (!file_t::isModifiable(colorsWriter->getFile())) {
       HERR("Config " + colorsWriter->getFile().string())
           << "File not modifiable by Hoshimi, skipping." << std::endl;
       colorsWriter->appendBeforeLine(
@@ -912,7 +944,6 @@ class GhosttyWriter {
 private:
   Colorscheme colors;
   WriterBase writer;
-  FilesManager files;
 
 public:
   void reloadGhostty() {
@@ -945,8 +976,8 @@ public:
   GhosttyWriter() {
     colors = ColorsHandler().getColors();
     writer =
-        WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() /
-                                            ".config/ghostty/themes/hoshimi"),
+        WriterBase(file_t::findHomeEquivilent(file_t::getdotfilesDirectory() /
+                                              ".config/ghostty/themes/hoshimi"),
                    FileType::VALUE_PAIR);
   }
 
@@ -993,14 +1024,14 @@ class FootWriter {
 private:
   Colorscheme colors;
   WriterBase writer;
-  FilesManager files;
 
 public:
   FootWriter() {
     colors = ColorsHandler().getColors();
-    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() /
-                                                 ".config/foot/foot.ini"),
-                        FileType::VALUE_PAIR);
+    writer =
+        WriterBase(file_t::findHomeEquivilent(file_t::getdotfilesDirectory() /
+                                              ".config/foot/foot.ini"),
+                   FileType::VALUE_PAIR);
   }
 
   bool writeConfig() {
@@ -1045,14 +1076,14 @@ class KittyWriter {
 private:
   Colorscheme colors;
   WriterBase writer;
-  FilesManager files;
 
 public:
   KittyWriter() {
     colors = ColorsHandler().getColors();
-    writer = WriterBase(files.findHomeEquivilent(files.getdotfilesDirectory() /
-                                                 ".config/kitty/hoshimi.conf"),
-                        FileType::VALUE_PAIR);
+    writer =
+        WriterBase(file_t::findHomeEquivilent(file_t::getdotfilesDirectory() /
+                                              ".config/kitty/hoshimi.conf"),
+                   FileType::VALUE_PAIR);
   }
 
   void reloadKitty() {
@@ -1097,12 +1128,11 @@ public:
 class AlacrittyWriter {
 private:
   Colorscheme colors;
-  FilesManager files;
   WriterBase writer;
 
   fs::path getAlacrittyPath() {
-    return files.findHomeEquivilent(files.getdotfilesDirectory() /
-                                    ".config/alacritty/themes/hoshimi.toml");
+    return file_t::findHomeEquivilent(file_t::getdotfilesDirectory() /
+                                      ".config/alacritty/themes/hoshimi.toml");
   }
 
 public:
@@ -1247,10 +1277,72 @@ public:
   }
 };
 
+class EquibopWriter {
+private:
+  Colorscheme colors;
+  WriterBase *themeWriter;
+
+public:
+  EquibopWriter() {
+    colors = ColorsHandler().getColors();
+    themeWriter = new WriterBase(
+        file_t::findHomeEquivilent(file_t::getdotfilesDirectory() /
+                                   ".config/equibop/DarkNeon.css"),
+        FileType::CSS);
+  }
+
+  ~EquibopWriter() { delete themeWriter; }
+
+  bool writeColors() {
+    bool exitCode = true;
+
+    themeWriter->replaceWithChecking(
+        "--rgb-highlight",
+        colors.highlightColor.toHex(Color::SPCSEP | Color::RGB), exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-background",
+        colors.backgroundColor.toHex(Color::SPCSEP | Color::RGB), exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-text", colors.foregroundColor.toHex(Color::SPCSEP | Color::RGB),
+        exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-close-button",
+        colors.iconColor.toHex(Color::SPCSEP | Color::RGB), exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-online-color",
+        colors.palette[10].toHex(Color::SPCSEP | Color::RGB), exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-afk-color", colors.palette[11].toHex(Color::SPCSEP | Color::RGB),
+        exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-dnd-color", colors.palette[1].toHex(Color::SPCSEP | Color::RGB),
+        exitCode);
+
+    themeWriter->replaceWithChecking(
+        "--rgb-streaming-color",
+        colors.palette[13].toHex(Color::SPCSEP | Color::RGB), exitCode);
+
+    if (!themeWriter->write()) {
+      exitCode = false;
+      std::cerr << "Error writing to file: "
+                << themeWriter->getFile().filename() << std::endl;
+    }
+
+    if (!exitCode)
+      themeWriter->revert();
+
+    return exitCode;
+  }
+};
+
 class JsonWriter : public JsonHandlerBase {
 private:
-  FilesManager files;
-
   /**
    * Set a nested value in JSON using an array of keys
    * @param root - The root cJSON object

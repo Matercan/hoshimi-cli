@@ -344,7 +344,7 @@ public:
 
 class ColorsHandler : public JsonHandlerBase {
 private:
-  cJSON *colors;
+  static cJSON *colors;
 
 public:
   ColorsHandler() {
@@ -356,7 +356,7 @@ public:
 
   ~ColorsHandler() { cJSON_free(colors); }
 
-  Colorscheme getColors() {
+  static Colorscheme getColors() {
 
     // Use safer access methods
     auto getObj = [&](cJSON *parent, const char *key) -> cJSON * {
@@ -385,8 +385,10 @@ public:
 
     std::string bgStr = getString(colors, "backgroundColor");
     std::string fgStr = getString(colors, "foregroundColor");
+    std::string hlStr = getString(colors, "highlightColor");
     Color backgroundColor = bgStr.empty() ? Color("#000000") : Color(bgStr);
     Color foregroundColor = fgStr.empty() ? Color("#ffffff") : Color(fgStr);
+    Color highlightColor = hlStr.empty() ? NULL : Color(hlStr);
 
     // Safer default value handling (note: JSON stores 1-based indexes in
     // theme files)
@@ -430,10 +432,10 @@ public:
     Color passwordColorValue = paletteColors[passwordColorIdx];
     Color borderColorValue = paletteColors[borderColorIdx];
 
-    Color mainColors[8] = {backgroundColor,    foregroundColor,
-                           activeColorValue,   selectedColorValue,
-                           iconColorValue,     errorColorValue,
-                           passwordColorValue, borderColorValue};
+    Color mainColors[9] = {
+        backgroundColor,    foregroundColor,  activeColorValue,
+        selectedColorValue, iconColorValue,   errorColorValue,
+        passwordColorValue, borderColorValue, highlightColor};
 
     return Colorscheme(mainColors, paletteColors);
   }

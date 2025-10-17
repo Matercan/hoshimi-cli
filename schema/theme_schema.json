@@ -37,6 +37,22 @@
         }
       }
     },
+    "fonts": {
+      "type": "object",
+      "description": "fonts for apps to use",
+      "properties": {
+        "monospace": {
+          "type": "string",
+          "default": "Fira Code iScript",
+          "description": "Font used in terminals"
+        },
+        "normal": {
+          "type": "string",
+          "default": "Roboto",
+          "description": "Font used for regular applications"
+        }
+      }
+    },
     "m3": {
       "type": "boolean",
       "default": "false",
@@ -88,6 +104,10 @@
           "description": "the palette color of borders",
           "default": 5,
           "maximum": 16
+        },
+        "higlightColor": {
+          "type": "string",
+          "description": "Highlight color, generated if not set"
         },
         "paletteColor1": {
           "type": "string",
