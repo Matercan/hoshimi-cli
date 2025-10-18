@@ -1,17 +1,9 @@
 #include "common/colorscheme.hpp"
 #include "common/json/json.hpp"
 #include "common/utils.hpp"
-#include <boost/algorithm/string/constants.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <cstddef>
-#include <cstdlib>
 #include <filesystem>
 #include <mutex>
-#include <ostream>
-#include <string>
 #include <thread>
-#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -776,7 +768,7 @@ public:
                                   boost::token_compress_on);
 
           newLine += split[0] + ": " + value;
-          updatedContents += newLine + "\n";
+          updatedContents += newLine + ";\n";
           written = true;
           continue;
         } else {
@@ -950,18 +942,18 @@ public:
         "foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT),
         exitCode);
 
-      Utils utils;
-      const auto &names = utils.COLOR_NAMES;
-      size_t max_i = std::min(colors.main.size(), names.size());
-      for (size_t i = 2; i < max_i; ++i) {
-        colorsWriter->replaceWithChecking(
-            names[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
-      }
-      if (colors.main.size() > names.size()) {
-        HLOG("Config") << "colors.main has " << colors.main.size()
-                         << " entries but only " << names.size()
-                         << " names available; skipping extras." << std::endl;
-      }
+    Utils utils;
+    const auto &names = utils.COLOR_NAMES;
+    size_t max_i = std::min(colors.main.size(), names.size());
+    for (size_t i = 2; i < max_i; ++i) {
+      colorsWriter->replaceWithChecking(
+          names[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
+    }
+    if (colors.main.size() > names.size()) {
+      HLOG("Config") << "colors.main has " << colors.main.size()
+                     << " entries but only " << names.size()
+                     << " names available; skipping extras." << std::endl;
+    }
 
     if (!colorsWriter->write()) {
       exitCode = false;
@@ -1343,7 +1335,7 @@ public:
     colors = ColorsHandler().getColors();
     themeWriter = new WriterBase(
         file_t::findHomeEquivilent(file_t::getdotfilesDirectory() /
-                                   ".config/equibop/DarkNeon.css"),
+                                   ".config/equibop/themes/gliss.theme.css"),
         FileType::CSS);
   }
 

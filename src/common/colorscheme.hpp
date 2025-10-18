@@ -180,11 +180,15 @@ public:
 
     // Treat a zero-initialized Color (0,0,0) as 'not provided' for the
     // highlight, otherwise use the provided value.
-    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 &&
-          mainColors[8].b == 0))
+    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 && mainColors[8].b == 0))
       highlightColor = mainColors[8];
-    else
-      highlightColor = selectedColor.lighten(0.2);
+    else {
+      uint8_t newR = std::min(255, palette[13].r * (int)1.2);
+      uint8_t newG = palette[14].g / 2;
+      uint8_t newB = std::min(255, palette[13].b * (int)1.3);
+
+      highlightColor = Color(newR, newG, newB);
+    }
 
     for (int i = 0; i < 8; i++)
       main.push_back(mainColors[i]);
@@ -201,8 +205,7 @@ public:
     errorColor = mainColors[5];
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
-    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 &&
-          mainColors[8].b == 0))
+    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 && mainColors[8].b == 0))
       highlightColor = mainColors[8];
     else
       highlightColor = selectedColor.lighten(0.2);

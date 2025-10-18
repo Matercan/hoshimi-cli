@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  fs::remove_all("tmp/");
+  fs::remove_all("tmp/*");
 
   getPackageInfo(argc, config, argv);
   std::string command = argv[1];
@@ -352,21 +352,20 @@ void sourceConfig(std::vector<Flag> config) {
   if (config[PACKAGES].present) {
     for (size_t i = 0; i < packages.size(); ++i) {
       if (packages[i] == "ghostty") {
-        GhosttyWriter gs;
-        gs.writeConfig();
+        GhosttyWriter().writeConfig();
       } else if (packages[i] == "quickshell") {
         genOsu(nullptr);
         QuickshellWriter qs;
         qs.writeColors();
         qs.writeShell();
       } else if (packages[i] == "alacritty") {
-        AlacrittyWriter as;
-        as.writeConfig();
+        AlacrittyWriter().writeConfig();
       } else if (packages[i] == "foot") {
-        FootWriter fs;
-        fs.writeConfig();
+        FootWriter().writeConfig();
       } else if (packages[i] == "custom") {
         CustomWriters().allWrite();
+      } else if (packages[i] == "equibop") {
+        EquibopWriter().writeColors();
       }
     }
   } else if (config[NOT_PACKAGES].present) {
@@ -394,6 +393,10 @@ void sourceConfig(std::vector<Flag> config) {
         notPackages.end()) {
       CustomWriters().allWrite();
     }
+    if (std::find(notPackages.begin(), notPackages.end(), "equibop") ==
+        notPackages.end()) {
+      EquibopWriter().writeColors();
+    }
   } else {
     GhosttyWriter *gs = new GhosttyWriter();
     gs->writeConfig();
@@ -414,6 +417,10 @@ void sourceConfig(std::vector<Flag> config) {
     CustomWriters *cs = new CustomWriters();
     cs->allWrite();
     delete cs;
+
+    EquibopWriter *eq = new EquibopWriter();
+    eq->writeColors();
+    delete eq;
   }
 
   if (config[NO_COMMANDS].present)
