@@ -2,11 +2,13 @@
 #define COLORS_H
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <inttypes.h>
 #include <iomanip>
 #include <ios>
 #include <string>
+#include <utility>
 #include <vector>
 
 #define BLACK Color("#0")
@@ -134,7 +136,6 @@ public:
   Color lighten(const float &percentage) const {
     return mix(WHITE, percentage);
   }
-
   Color darken(const float &percentage) const { return mix(BLACK, percentage); }
 
   bool operator==(const Color &other) const {
@@ -147,7 +148,28 @@ public:
   bool operator<(const Color other) const {
     return (this->r + this->g + this->b) < (other.r + other.g + other.b);
   }
-  bool light() { return (this->r + this->g + this->b) > 384; }
+
+  float saturation() const {
+    return (float)(this->r + this->g + this->b) / (255 * 3);
+  }
+  float brightness() const {
+    return 0.2126 * this->r + 0.7152 * this->g + 0.0722 * this->b;
+  }
+  float hue() const {
+    float R = (float)this->r / UINT8_MAX;
+    float G = (float)this->g / UINT8_MAX;
+    float B = (float)this->b / UINT8_MAX;
+
+    uint8_t maxColor = std::max(R, std::max(G, B));
+    uint8_t minColor = std::min(R, std::min(G, B));
+    if (maxColor == R)
+      return ((float)(G - B) / (maxColor - minColor)) * 60;
+    else if (maxColor == G)
+      return (2 + (float)(B - R) / (maxColor - minColor)) * 60;
+    else
+      return (4 + (float)(R - G) / (maxColor - minColor)) * 60;
+  }
+  bool light() const { return (this->r + this->g + this->b) > 384; }
 };
 
 class Colorscheme {
@@ -183,11 +205,53 @@ public:
     if (!(mainColors[8].r == 0 && mainColors[8].g == 0 && mainColors[8].b == 0))
       highlightColor = mainColors[8];
     else {
-      uint8_t newR = std::min(255, palette[13].r * (int)1.2);
-      uint8_t newG = palette[14].g / 2;
-      uint8_t newB = std::min(255, palette[13].b * (int)1.3);
 
-      highlightColor = Color(newR, newG, newB);
+      // the highlight color needs to be similar to purple but still be
+      // lumiscent and saturated if dark mode, or still saturated but less
+      // luminescent on light mode
+
+      if (!backgroundColor.light()) {
+        highlightColor = Color(std::min(paletteColors[13].r * (int)1.2, 255),
+                               paletteColors[13].g / 2,
+                               std::min(paletteColors[13].b * (int)1.3, 255));
+      } else {
+        constexpr int targetPurple = 270;
+
+        auto score = [&](const Color &color) -> int {
+          const float CR = color > backgroundColor
+                               ? (color.brightness() + 0.05) /
+                                     (backgroundColor.brightness() + 0.05)
+                               : (backgroundColor.brightness() + 0.05) /
+                                     (color.brightness() + 0.05);
+
+          const float CS = std::min((float)1, CR / 7);
+
+          const float hueDiff =
+              std::min(std::abs(color.hue() - targetPurple),
+                       (float)360 - std::abs((color.hue(), targetPurple)));
+
+          const float hueScore = 1 - (hueDiff / 60);
+
+          const float vibrancyScore = std::exp(
+              -((color.saturation() - 0.7) * (color.saturation() - 0.7) / 0.1));
+
+          return 0.5 * CS + 0.3 * hueScore + 0.2 * vibrancyScore;
+        };
+
+        typedef std::pair<Color, float> scoredcolor_t;
+
+        scoredcolor_t bestColor = {Color("#0"), 0};
+
+        for (size_t i = 0; i < paletteColors.size(); ++i) {
+          if (score(paletteColors[i]) > bestColor.second) {
+            bestColor = {paletteColors[i], score(paletteColors[i])};
+          } else {
+            continue;
+          }
+        }
+
+        highlightColor = bestColor.first;
+      }
     }
 
     for (int i = 0; i < 8; i++)
