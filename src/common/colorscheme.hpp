@@ -180,8 +180,7 @@ public:
 
     // Treat a zero-initialized Color (0,0,0) as 'not provided' for the
     // highlight, otherwise use the provided value.
-    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 &&
-          mainColors[8].b == 0))
+    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 && mainColors[8].b == 0))
       highlightColor = mainColors[8];
     else
       highlightColor = selectedColor.lighten(0.2);
@@ -201,8 +200,7 @@ public:
     errorColor = mainColors[5];
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
-    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 &&
-          mainColors[8].b == 0))
+    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 && mainColors[8].b == 0))
       highlightColor = mainColors[8];
     else
       highlightColor = selectedColor.lighten(0.2);

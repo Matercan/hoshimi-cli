@@ -950,18 +950,18 @@ public:
         "foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT),
         exitCode);
 
-      Utils utils;
-      const auto &names = utils.COLOR_NAMES;
-      size_t max_i = std::min(colors.main.size(), names.size());
-      for (size_t i = 2; i < max_i; ++i) {
-        colorsWriter->replaceWithChecking(
-            names[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
-      }
-      if (colors.main.size() > names.size()) {
-        HLOG("Config") << "colors.main has " << colors.main.size()
-                         << " entries but only " << names.size()
-                         << " names available; skipping extras." << std::endl;
-      }
+    Utils utils;
+    const auto &names = utils.COLOR_NAMES;
+    size_t max_i = std::min(colors.main.size(), names.size());
+    for (size_t i = 2; i < max_i; ++i) {
+      colorsWriter->replaceWithChecking(
+          names[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
+    }
+    if (colors.main.size() > names.size()) {
+      HLOG("Config") << "colors.main has " << colors.main.size()
+                     << " entries but only " << names.size()
+                     << " names available; skipping extras." << std::endl;
+    }
 
     if (!colorsWriter->write()) {
       exitCode = false;
