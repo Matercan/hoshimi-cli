@@ -3,6 +3,7 @@
 #include "osu/osu.h"
 #include "version.h"
 #include <algorithm>
+#include <filesystem>
 #include <sstream>
 #include <vector>
 
@@ -129,8 +130,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  getPackageInfo(argc, config, argv);
+  fs::remove_all("tmp/");
 
+  getPackageInfo(argc, config, argv);
   std::string command = argv[1];
 
   if (command == "install") {

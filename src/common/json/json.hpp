@@ -344,7 +344,7 @@ public:
 
 class ColorsHandler : public JsonHandlerBase {
 private:
-  static cJSON *colors;
+  cJSON *colors;
 
 public:
   ColorsHandler() {
@@ -356,7 +356,7 @@ public:
 
   ~ColorsHandler() { cJSON_free(colors); }
 
-  static Colorscheme getColors() {
+  Colorscheme getColors() {
 
     // Use safer access methods
     auto getObj = [&](cJSON *parent, const char *key) -> cJSON * {
@@ -388,7 +388,12 @@ public:
     std::string hlStr = getString(colors, "highlightColor");
     Color backgroundColor = bgStr.empty() ? Color("#000000") : Color(bgStr);
     Color foregroundColor = fgStr.empty() ? Color("#ffffff") : Color(fgStr);
-    Color highlightColor = hlStr.empty() ? NULL : Color(hlStr);
+    // Avoid constructing Color from a null pointer. If a highlight color is
+    // provided use it, otherwise leave it zero-initialized and let
+    // Colorscheme decide a sensible default.
+    Color highlightColor;
+    if (!hlStr.empty())
+      highlightColor = Color(hlStr);
 
     // Safer default value handling (note: JSON stores 1-based indexes in
     // theme files)

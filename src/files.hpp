@@ -24,11 +24,16 @@ enum FileType {
 
 class FilesManager {
 public:
-  static fs::path getdotfilesDirectory() { return DOTFILES_DIRECTORY; }
+  static fs::path getdotfilesDirectory() {
+    initIfNeeded();
+    return DOTFILES_DIRECTORY;
+  }
   static fs::path getQuickshellFolder() {
+    initIfNeeded();
     return DOTFILES_DIRECTORY / ".config/quickshell/";
   }
   static fs::path findHomeEquivilent(fs::path dotfile) {
+    initIfNeeded();
     return HOME / findDotfilesRelativePath(dotfile);
   }
 
@@ -48,10 +53,54 @@ public:
   }
 
 private:
-  static std::string HOSHIMI_HOME;
-  static std::string HOME;
-  static fs::path DOTFILES_DIRECTORY;
-  static fs::path BACKUP_DIRECTORY;
+  inline static std::string HOSHIMI_HOME;
+  inline static std::string HOME;
+  inline static fs::path DOTFILES_DIRECTORY;
+  inline static fs::path BACKUP_DIRECTORY;
+  inline static std::once_flag init_flag;
+
+  static void initIfNeeded() {
+    std::call_once(init_flag, []() {
+      const char *home_env = getenv("HOME");
+      if (!home_env) {
+        std::cerr << "HOME environment variable not set" << std::endl;
+        HOME = std::string{};
+      } else {
+        HOME = std::string(home_env);
+      }
+
+      const char *xdg_data_home = getenv("XDG_DATA_HOME");
+      if (xdg_data_home && fs::exists(xdg_data_home)) {
+        HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
+      } else if (!HOME.empty()) {
+        HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
+      } else {
+        HOSHIMI_HOME = std::string{};
+      }
+
+      if (!HOSHIMI_HOME.empty() && !fs::exists(HOSHIMI_HOME)) {
+        const std::string DOWNLOAD_COMMAND =
+            "git clone https://github.com/Matercan/hoshimi-dots.git " +
+            HOSHIMI_HOME;
+
+        HLOG("Install") << "Cloning dotfiles from GitHub to " << HOSHIMI_HOME
+                        << "." << std::endl;
+        HLOG("Install") << "Running: " << DOWNLOAD_COMMAND << "." << std::endl;
+        int result = system(DOWNLOAD_COMMAND.c_str());
+        if (result != 0) {
+          std::cerr << "Git clone failed" << std::endl;
+        }
+      }
+
+      if (!HOSHIMI_HOME.empty()) {
+        DOTFILES_DIRECTORY = HOSHIMI_HOME + "/dotfiles";
+        BACKUP_DIRECTORY = HOSHIMI_HOME + "/backup";
+      } else {
+        DOTFILES_DIRECTORY = fs::path();
+        BACKUP_DIRECTORY = fs::path();
+      }
+    });
+  }
 
   static fs::path findDotfilesRelativePath(const fs::path &dotfile) {
     std::vector<std::string> path;
@@ -901,11 +950,18 @@ public:
         "foregroundColor", colors.foregroundColor.toHex(Color::FLAGS::WQUOT),
         exitCode);
 
-    for (size_t i = 2; i < colors.main.size(); ++i) {
-      colorsWriter->replaceWithChecking(
-          Utils().COLOR_NAMES[i], colors.main[i].toHex(Color::FLAGS::WQUOT),
-          exitCode);
-    }
+      Utils utils;
+      const auto &names = utils.COLOR_NAMES;
+      size_t max_i = std::min(colors.main.size(), names.size());
+      for (size_t i = 2; i < max_i; ++i) {
+        colorsWriter->replaceWithChecking(
+            names[i], colors.main[i].toHex(Color::FLAGS::WQUOT), exitCode);
+      }
+      if (colors.main.size() > names.size()) {
+        HLOG("Config") << "colors.main has " << colors.main.size()
+                         << " entries but only " << names.size()
+                         << " names available; skipping extras." << std::endl;
+      }
 
     if (!colorsWriter->write()) {
       exitCode = false;

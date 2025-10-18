@@ -26,5 +26,9 @@ jobs:
             - gtk and qt6/qt5 themes writing
             - Update schema to compensate 
             - Equibop writing and custom theme
+
+            - Added specific package aliases, for example terminal would mean all the terminals, qs would mean quickshell
+            - Added the ability to write variables from the program
+            - Added the ability to write when colors satisfy certain properties
           draft: false
           prerelease: true

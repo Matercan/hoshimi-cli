@@ -87,10 +87,16 @@ public:
       ss << '"';
 
     if (flag & FLAGS::RGB) {
-      ss << r << ",";
-      ss << (flag & FLAGS::SPCSEP) ? " " : "";
-      ss << g << ",";
-      ss << (flag & FLAGS::SPCSEP) ? " " : "";
+      ss << r;
+      if (flag & FLAGS::SPCSEP)
+        ss << ", ";
+      else
+        ss << ",";
+      ss << g;
+      if (flag & FLAGS::SPCSEP)
+        ss << ", ";
+      else
+        ss << ",";
       ss << b;
 
     } else { // If not NHASH, include the leading '#'
@@ -100,9 +106,11 @@ public:
       // Ensure we print two hex digits per color component with leading zeros
       ss << std::hex << std::setfill('0') << std::nouppercase;
       ss << std::setw(2) << (static_cast<int>(r) & 0xFF);
-      ss << (flag & FLAGS::SPCSEP) ? " " : "";
+      if (flag & FLAGS::SPCSEP)
+        ss << ' ';
       ss << std::setw(2) << (static_cast<int>(g) & 0xFF);
-      ss << (flag & FLAGS::SPCSEP) ? " " : "";
+      if (flag & FLAGS::SPCSEP)
+        ss << ' ';
       ss << std::setw(2) << (static_cast<int>(b) & 0xFF);
     }
 
@@ -170,7 +178,10 @@ public:
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
 
-    if (mainColors[8] != NULL)
+    // Treat a zero-initialized Color (0,0,0) as 'not provided' for the
+    // highlight, otherwise use the provided value.
+    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 &&
+          mainColors[8].b == 0))
       highlightColor = mainColors[8];
     else
       highlightColor = selectedColor.lighten(0.2);
@@ -190,7 +201,8 @@ public:
     errorColor = mainColors[5];
     passwordColor = mainColors[6];
     borderColor = mainColors[7];
-    if (mainColors[8] != NULL)
+    if (!(mainColors[8].r == 0 && mainColors[8].g == 0 &&
+          mainColors[8].b == 0))
       highlightColor = mainColors[8];
     else
       highlightColor = selectedColor.lighten(0.2);
