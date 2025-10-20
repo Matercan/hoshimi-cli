@@ -58,6 +58,7 @@ find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 pkg_check_modules(cJSON REQUIRED libcjson)
 pkg_check_modules(SndFile REQUIRED sndfile)
+pkg_check_modules(LIBZIP REQUIRED libzip)
 
 
 # Create stb_impl as an OBJECT library (compiled once, linked many times)
@@ -78,6 +79,8 @@ target_compile_options(json_handler PRIVATE
 )
 target_link_libraries(json_handler cjson)
 target_include_directories(json_handler PRIVATE ${cJSON_INCLUDE_DIRS})
+target_link_libraries(json_handler zip)
+target_include_directories(json_handler PRIVATE ${LIBZIP_INCLUDE_DIRS})
 
 # osu library
 add_library(osu SHARED

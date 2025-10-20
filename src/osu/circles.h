@@ -92,7 +92,7 @@ void *genCircle(void *arg) {
 
     // Save output
     char outname[256];
-    sprintf(outname, "%s/../osuGen/%s-%d.png", load_config()->osuSkin,
+    sprintf(outname, "%s/../osuGen/%s-%d.png", info->config->downloadPath,
             info->name, info->num);
     stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
 
@@ -108,7 +108,8 @@ void *genCircle(void *arg) {
 
     char outname[256];
 
-    sprintf(outname, "%s/../osuGen/%s.png", info->config->osuSkin, info->name);
+    sprintf(outname, "%s/../osuGen/%s.png", info->config->downloadPath,
+            info->name);
     stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
   }
 
@@ -117,7 +118,7 @@ void *genCircle(void *arg) {
   return NULL;
 }
 
-int generateCircles(void *foo) {
+int generateCircles(Config *config) {
   // Load colors from JSON
   C_ColorScheme *colors = load_colorscheme();
   if (!colors) {
@@ -140,7 +141,7 @@ int generateCircles(void *foo) {
 
   // Load base images
   int hw, hh, hc;
-  char *osuPath = load_config()->osuSkin;
+  char *osuPath = config->osuSkin;
   size_t baseLen = strlen(osuPath);
 
   char *hitCirclePath = (char *)malloc(baseLen + 20);
@@ -167,7 +168,6 @@ int generateCircles(void *foo) {
   int nw[10], nh[10];
 
   // Load config once, not in loop
-  Config *config = load_config();
   if (!config || !config->osuSkin) {
     printf("Failed to load config or osuSkin path\n");
     stbi_image_free(hitcircle);

@@ -32,5 +32,6 @@ jobs:
             - Added the ability to write when colors satisfy certain properties
 
             - Added the hoshimi-daemon, a powerful tool to help relieve manual adjustments between the dotfiles and source
+            - Added the ability to unzip .osk files instead of having the unzipped
           draft: false
           prerelease: true

@@ -27,7 +27,7 @@
           "type": "string",
           "description": "The path to the osu skin you are using",
           "examples": [
-            "~/.local/share/hoshimi/assets/osu/"
+            "~/.local/share/hoshimi/assets/osu"
           ]
         }
       }

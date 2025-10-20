@@ -9,6 +9,7 @@ typedef struct {
   char *wallpaper;
   char **commands;
   char *osuSkin;
+  char *downloadPath;
 } Config;
 
 typedef struct {

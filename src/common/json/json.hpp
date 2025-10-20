@@ -4,17 +4,158 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <cjson/cJSON.h>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <libgen.h>
 #include <ostream>
 #include <regex>
+#include <sys/stat.h>
+#include <zip.h>
 
 #include "../colorscheme.hpp"
 #include "../utils.hpp"
 
 namespace fs = std::filesystem;
+
+inline char *recursively_locate_osu_file(const char *filename,
+                                               const zip_t *archive) {
+  if (!filename || !archive)
+    return NULL;
+
+  zip_int64_t num_entries = zip_get_num_entries((zip_t *)archive, 0);
+  if (num_entries <= 0)
+    return NULL;
+
+  struct zip_stat st;
+  for (zip_int64_t i = 0; i < num_entries; ++i) {
+    if (zip_stat_index((zip_t *)archive, i, 0, &st) != 0)
+      continue;
+
+    if (!st.name)
+      continue;
+
+    // get the basename of the entry (part after last '/')
+    const char *base = strrchr(st.name, '/');
+    if (base)
+      base++;
+    else
+      base = st.name;
+
+    if (strcmp(base, filename) == 0) {
+      // return a duplicated string of the internal path so caller can free
+      return strdup(st.name);
+    }
+  }
+
+  return NULL;
+}
+
+inline int mkdir_recursive(const char *path) {
+  char tmp[1024];
+  char *p = NULL;
+  size_t len;
+
+  snprintf(tmp, sizeof(tmp), "%s", path);
+  len = strlen(tmp);
+
+  if (tmp[len - 1] == '/')
+    tmp[len - 1] = 0;
+
+  for (p = tmp + 1; *p; p++) {
+    if (*p == '/' || *p == '\\') {
+      *p = 0;
+      mkdir(tmp, 0755);
+      *p = '/';
+    }
+  }
+  mkdir(tmp, 0755);
+  return 0;
+}
+
+inline char *get_common_prefix(zip_t *archive) {
+  zip_int64_t num_entries = zip_get_num_entries(archive, 0);
+  if (num_entries == 0)
+    return NULL;
+
+  // Get first entry's directory
+  struct zip_stat st;
+  zip_stat_index(archive, 0, 0, &st);
+
+  const char *first_slash = strchr(st.name, '/');
+  if (!first_slash)
+    return NULL;
+
+  size_t prefix_len = first_slash - st.name + 1;
+  char *prefix = strndup(st.name, prefix_len);
+
+  // Check if all entries start with this prefix
+  for (zip_int64_t i = 1; i < num_entries; i++) {
+    zip_stat_index(archive, i, 0, &st);
+    if (strncmp(st.name, prefix, prefix_len) != 0) {
+      free(prefix);
+      return NULL;
+    }
+  }
+
+  return prefix;
+}
+
+inline int extract_zipped_file(char *filename, char *destdir, zip_t *archive) {
+
+  int index = zip_name_locate(archive, filename, 0);
+
+  if (index < 0) {
+    HERR("JSON") << "File: " << filename << " not found in archive "
+                 << std::endl;
+    return 1;
+  }
+
+  char dest_path[1024];
+  snprintf(dest_path, sizeof(dest_path), "%s/%s", destdir, filename);
+
+  zip_file_t *zf = zip_fopen_index(archive, index, 0);
+  if (!zf) {
+    HERR("JSON") << "Failed to open " << filename << " in archive" << std::endl;
+    return -1;
+  }
+
+  char *prefix = get_common_prefix(archive);
+  std::string str = dest_path;
+  str.erase(str.find(prefix), std::string(prefix).length());
+  const char *destPath = str.c_str();
+
+  FILE *out = fopen(destPath, "wb");
+  if (!out) {
+    char *dir_path = strdup(destPath);
+    char *dir = dirname(dir_path);
+    mkdir_recursive(dir);
+    free(dir_path);
+
+    // Try opening again
+    out = fopen(destPath, "wb");
+    if (!out) {
+      HERR("JSON") << "failed to create output file " << destPath << std::endl;
+      zip_fclose(zf);
+      return -1;
+    }
+  }
+
+  char buf[8192];
+
+  zip_int64_t len;
+  while ((len = zip_fread(zf, buf, sizeof(buf))) > 0) {
+    fwrite(buf, 1, len, out);
+  }
+
+  fclose(out);
+  zip_fclose(zf);
+
+  HLOG("JSON") << "extracted " << filename << " to " << destPath << std::endl;
+  return 0;
+}
 
 class JsonHandlerBase {
 private:
@@ -337,6 +478,81 @@ public:
     if (home && osuPath.rfind("~/", 0) == 0)
       osuPath = std::string(home) + osuPath.substr(1);
     config.osuSkin = osuPath;
+
+
+    int err = 0;
+    zip_t *skin = zip_open(osuPath.c_str(), 0, &err);
+
+    if (skin == NULL) {
+      zip_error_t error;
+      zip_error_init_with_code(&error, err);
+      HERR("JSON") << "Cannot open zip archive: " << osuPath.c_str() << ": "
+                   << zip_error_strerror(&error) << std::endl;
+    } else {
+
+      mkdir("osu/", 0755);
+
+      // the create the files neccessary
+
+      const char *samplesets[] = {"normal", "soft", "drum"};
+      const char *additions[] = {"hitwhistle", "hitfinish", "hitclap",
+                                 "hitnormal"};
+
+      for (int s = 0; s < 3; ++s) {
+        const char *sampleset = samplesets[s];
+
+        for (int a = 0; a < 4; ++a) {
+          const char *addition = additions[a];
+
+          char out_path[512];
+          snprintf(out_path, sizeof(out_path), "%s-%s.wav", sampleset,
+                   addition);
+          
+          char *outPath = recursively_locate_osu_file(out_path, skin);
+
+          extract_zipped_file(outPath, strdup("osu/"), skin);
+          free(outPath);
+        }
+      }
+
+      mkdir_recursive("osu/fonts/hitcircle");
+
+      // Try locating files by basename inside the archive so we don't have to
+      // rely on a specific prefix layout.
+      char *internal = NULL;
+
+      // hitcircle
+      internal = recursively_locate_osu_file("hitcircle.png", skin);
+      if (internal) {
+        extract_zipped_file(internal, strdup("osu"), skin);
+        free(internal);
+      } else {
+        HERR("JSON") << "hitcircle.png not found inside archive" << std::endl;
+      }
+
+      // hitcircleoverlay
+      internal = recursively_locate_osu_file("hitcircleoverlay.png", skin);
+      if (internal) {
+        extract_zipped_file(internal, strdup("osu"), skin);
+        free(internal);
+      } else {
+        HERR("JSON") << "hitcircleoverlay.png not found inside archive" << std::endl;
+      }
+
+      // default-0..default-9
+      for (int i = 0; i <= 9; ++i) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "default-%d.png", i);
+        internal = recursively_locate_osu_file(buf, skin);
+        if (internal) {
+          extract_zipped_file(internal, strdup("osu/fonts/hitcircle"), skin);
+          free(internal);
+        } else {
+          HERR("JSON") << "" << buf << " not found inside archive" << std::endl;
+        }
+      }
+
+    }
 
     return config;
   }

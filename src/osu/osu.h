@@ -3,10 +3,15 @@
 
 #include "circles.h"
 #include "hitsounds.h"
+#include "sys/stat.h"
+#include <dirent.h>
 
 inline void genOsu(void *foo) {
-  generateSounds(load_config()->osuSkin);
-  generateCircles(NULL);
+  Config *config = load_config();
+
+  generateSounds(config);
+  generateCircles(config);
+  free_config(config);
 }
 
 #endif

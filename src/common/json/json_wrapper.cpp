@@ -1,6 +1,8 @@
 #include "json_wrapper.h"
 #include "json.hpp"
-#include <cstdlib>
+#include <cstring>
+#include <sys/stat.h>
+#include <zip.h>
 
 extern "C" {
 
@@ -31,8 +33,24 @@ Config *load_config(void) {
       cConfig->commands = nullptr;
     }
 
-    std::string osuSkinStr = cppConfig.osuSkin;
-    cConfig->osuSkin = strdup(osuSkinStr.c_str());
+    cConfig->osuSkin = (char *)malloc(5);
+
+    std::string skin = cppConfig.osuSkin;
+    strcpy(cConfig->osuSkin, "osu/");
+
+    auto r_it =
+        std::find(skin.rbegin(), skin.rend(), '/');
+
+    if (r_it != skin.rend()) {
+      auto it = r_it.base();
+      --it;
+
+      skin.erase(it, skin.end());
+      skin += "/osuGen/";
+    }
+
+    cConfig->downloadPath = (char *)malloc(skin.size() + 1);
+    strcpy(cConfig->downloadPath, skin.c_str());
 
     return cConfig;
   } catch (...) {

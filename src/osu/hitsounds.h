@@ -121,7 +121,9 @@ void free_audio(AudioBuffer *buf) {
   }
 }
 
-int generateSounds(const char *skinDir) {
+int generateSounds(Config *config) {
+
+  const char *skinDir = config->osuSkin;
 
   // Define hitsound types
   const char *samplesets[] = {"normal", "soft", "drum"};
@@ -156,7 +158,7 @@ int generateSounds(const char *skinDir) {
 
         char out_path[512];
         snprintf(out_path, sizeof(out_path), "%s/../osuGen/%s-hitnormal-%s.wav",
-                 load_config()->osuSkin, sampleset, addition);
+                 config->downloadPath, sampleset, addition);
         save_audio(out_path, mixed);
 
         free_audio(mixed);
@@ -181,9 +183,9 @@ int generateSounds(const char *skinDir) {
           AudioBuffer *final = mix_audio(temp, add2);
 
           char out_path[512];
-          snprintf(
-              out_path, sizeof(out_path), "%s/../osuGen/%s-hitnormal-%s-%s.wav",
-              load_config()->osuSkin, sampleset, additions[a1], additions[a2]);
+          snprintf(out_path, sizeof(out_path),
+                   "%s/../osuGen/%s-hitnormal-%s-%s.wav", config->downloadPath,
+                   sampleset, additions[a1], additions[a2]);
           save_audio(out_path, final);
 
           free_audio(final);
