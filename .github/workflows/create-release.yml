@@ -30,5 +30,7 @@ jobs:
             - Added specific package aliases, for example terminal would mean all the terminals, qs would mean quickshell
             - Added the ability to write variables from the program
             - Added the ability to write when colors satisfy certain properties
+
+            - Added the hoshimi-daemon, a powerful tool to help relieve manual adjustments between the dotfiles and source
           draft: false
           prerelease: true
