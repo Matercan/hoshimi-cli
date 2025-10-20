@@ -356,7 +356,7 @@ void sourceConfig(std::vector<Flag> config) {
         GhosttyWriter().writeConfig();
       } else if (packages[i] == "quickshell") {
         genOsu(nullptr);
-          fs::remove_all("osu");
+        fs::remove_all("osu");
         QuickshellWriter qs;
         qs.writeColors();
         qs.writeShell();
@@ -379,7 +379,7 @@ void sourceConfig(std::vector<Flag> config) {
         notPackages.end()) {
       QuickshellWriter *qs = new QuickshellWriter();
       genOsu(nullptr);
-        fs::remove_all("osu");
+      fs::remove_all("osu");
       qs->writeColors();
       qs->writeShell();
       delete qs;
@@ -413,7 +413,7 @@ void sourceConfig(std::vector<Flag> config) {
 
     QuickshellWriter *qs = new QuickshellWriter();
     genOsu(nullptr);
-      fs::remove_all("osu");
+    fs::remove_all("osu");
     qs->writeColors();
     qs->writeShell();
     delete qs;
@@ -584,7 +584,7 @@ void restart(std::vector<Flag> &config) {
   }
 
   genOsu(nullptr);
-    fs::remove_all("osu");
+  fs::remove_all("osu");
 
   system("killall qs; \n "
          "nohup  qs > /dev/null 2>&1 &");

@@ -21,7 +21,7 @@
 namespace fs = std::filesystem;
 
 inline char *recursively_locate_osu_file(const char *filename,
-                                               const zip_t *archive) {
+                                         const zip_t *archive) {
   if (!filename || !archive)
     return NULL;
 
@@ -479,7 +479,6 @@ public:
       osuPath = std::string(home) + osuPath.substr(1);
     config.osuSkin = osuPath;
 
-
     int err = 0;
     zip_t *skin = zip_open(osuPath.c_str(), 0, &err);
 
@@ -507,7 +506,7 @@ public:
           char out_path[512];
           snprintf(out_path, sizeof(out_path), "%s-%s.wav", sampleset,
                    addition);
-          
+
           char *outPath = recursively_locate_osu_file(out_path, skin);
 
           extract_zipped_file(outPath, strdup("osu/"), skin);
@@ -536,7 +535,8 @@ public:
         extract_zipped_file(internal, strdup("osu"), skin);
         free(internal);
       } else {
-        HERR("JSON") << "hitcircleoverlay.png not found inside archive" << std::endl;
+        HERR("JSON") << "hitcircleoverlay.png not found inside archive"
+                     << std::endl;
       }
 
       // default-0..default-9
@@ -551,7 +551,6 @@ public:
           HERR("JSON") << "" << buf << " not found inside archive" << std::endl;
         }
       }
-
     }
 
     return config;

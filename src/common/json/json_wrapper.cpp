@@ -38,8 +38,7 @@ Config *load_config(void) {
     std::string skin = cppConfig.osuSkin;
     strcpy(cConfig->osuSkin, "osu/");
 
-    auto r_it =
-        std::find(skin.rbegin(), skin.rend(), '/');
+    auto r_it = std::find(skin.rbegin(), skin.rend(), '/');
 
     if (r_it != skin.rend()) {
       auto it = r_it.base();
