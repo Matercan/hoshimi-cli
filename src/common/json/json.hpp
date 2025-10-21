@@ -17,6 +17,7 @@
 
 #include "../colorscheme.hpp"
 #include "../utils.hpp"
+#include "../utils.h"
 
 namespace fs = std::filesystem;
 
@@ -53,27 +54,6 @@ inline char *recursively_locate_osu_file(const char *filename,
   return NULL;
 }
 
-inline int mkdir_recursive(const char *path) {
-  char tmp[1024];
-  char *p = NULL;
-  size_t len;
-
-  snprintf(tmp, sizeof(tmp), "%s", path);
-  len = strlen(tmp);
-
-  if (tmp[len - 1] == '/')
-    tmp[len - 1] = 0;
-
-  for (p = tmp + 1; *p; p++) {
-    if (*p == '/' || *p == '\\') {
-      *p = 0;
-      mkdir(tmp, 0755);
-      *p = '/';
-    }
-  }
-  mkdir(tmp, 0755);
-  return 0;
-}
 
 inline char *get_common_prefix(zip_t *archive) {
   zip_int64_t num_entries = zip_get_num_entries(archive, 0);
@@ -124,7 +104,8 @@ inline int extract_zipped_file(char *filename, char *destdir, zip_t *archive) {
 
   char *prefix = get_common_prefix(archive);
   std::string str = dest_path;
-  str.erase(str.find(prefix), std::string(prefix).length());
+  if (prefix)
+    str.erase(str.find(prefix), std::string(prefix).length());
   const char *destPath = str.c_str();
 
   FILE *out = fopen(destPath, "wb");
@@ -509,6 +490,7 @@ public:
           char *outPath = recursively_locate_osu_file(out_path, skin);
 
           extract_zipped_file(outPath, strdup("osu/"), skin);
+
           free(outPath);
         }
       }

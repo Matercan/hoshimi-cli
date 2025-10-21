@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../common/json/json_wrapper.h"
+#include "../common/utils.h"
 
 #include <sndfile.h>
 #include <stdio.h>
@@ -184,8 +185,10 @@ int generateSounds(Config *config) {
 
           char out_path[512];
           snprintf(out_path, sizeof(out_path),
-                   "%s/../osuGen/%s-hitnormal-%s-%s.wav", config->downloadPath,
+                   "%s/%s-hitnormal-%s-%s.wav", config->downloadPath,
                    sampleset, additions[a1], additions[a2]);
+          remove(out_path);
+          mkdir_recursive(config->downloadPath);
           save_audio(out_path, final);
 
           free_audio(final);
