@@ -153,7 +153,6 @@ inline int extract_zipped_file(char *filename, char *destdir, zip_t *archive) {
   fclose(out);
   zip_fclose(zf);
 
-  HLOG("JSON") << "extracted " << filename << " to " << destPath << std::endl;
   return 0;
 }
 
