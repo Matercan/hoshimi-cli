@@ -1,8 +1,8 @@
 #pragma once
 
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,4 +33,3 @@ int mkdir_recursive(const char *path) {
 #ifdef __cplusplus
 }
 #endif
-

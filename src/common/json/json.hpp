@@ -16,8 +16,8 @@
 #include <zip.h>
 
 #include "../colorscheme.hpp"
-#include "../utils.hpp"
 #include "../utils.h"
+#include "../utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -53,7 +53,6 @@ inline char *recursively_locate_osu_file(const char *filename,
 
   return NULL;
 }
-
 
 inline char *get_common_prefix(zip_t *archive) {
   zip_int64_t num_entries = zip_get_num_entries(archive, 0);

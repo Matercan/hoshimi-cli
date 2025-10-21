@@ -184,9 +184,9 @@ int generateSounds(Config *config) {
           AudioBuffer *final = mix_audio(temp, add2);
 
           char out_path[512];
-          snprintf(out_path, sizeof(out_path),
-                   "%s/%s-hitnormal-%s-%s.wav", config->downloadPath,
-                   sampleset, additions[a1], additions[a2]);
+          snprintf(out_path, sizeof(out_path), "%s/%s-hitnormal-%s-%s.wav",
+                   config->downloadPath, sampleset, additions[a1],
+                   additions[a2]);
           remove(out_path);
           mkdir_recursive(config->downloadPath);
           save_audio(out_path, final);

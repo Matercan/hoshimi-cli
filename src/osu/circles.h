@@ -1,13 +1,13 @@
 
 #include "../common/json/json_wrapper.h"
 
+#include "../common/utils.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../common/utils.h"
 
 // Tint an RGBA image with a color
 void tint_image(unsigned char *img, int w, int h, ColorRGB tint) {
@@ -95,7 +95,7 @@ void *genCircle(void *arg) {
     char outname[256];
     sprintf(outname, "%s/../osuGen/%s-%d.png", info->config->downloadPath,
             info->name, info->num);
-                remove(outname);
+    remove(outname);
     mkdir_recursive(info->config->downloadPath);
     stbi_write_png(outname, out_w, out_h, 4, output, out_w * 4);
 
