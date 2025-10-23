@@ -130,6 +130,8 @@ inline int extract_zipped_file(char *filename, char *destdir, zip_t *archive) {
     fwrite(buf, 1, len, out);
   }
 
+  free(prefix);
+
   fclose(out);
   zip_fclose(zf);
 
@@ -530,6 +532,8 @@ public:
         }
       }
     }
+
+    zip_close(skin);
 
     return config;
   }
