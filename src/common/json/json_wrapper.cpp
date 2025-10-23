@@ -1,5 +1,8 @@
 #include "json_wrapper.h"
+#include "../utils.h"
 #include "json.hpp"
+
+#include <cstdio>
 #include <cstring>
 #include <sys/stat.h>
 #include <zip.h>
@@ -35,21 +38,15 @@ Config *load_config(void) {
 
     cConfig->osuSkin = (char *)malloc(5);
 
-    std::string skin = cppConfig.osuSkin;
     strcpy(cConfig->osuSkin, "osu/");
 
-    auto r_it = std::find(skin.rbegin(), skin.rend(), '/');
+    char *home = getHoshimiHome(NULL);
+    char downloadPath[128];
+    snprintf(downloadPath, sizeof(downloadPath), "%s/assets/osuGen", home);
 
-    if (r_it != skin.rend()) {
-      auto it = r_it.base();
-      --it;
+    cConfig->downloadPath = strdup(downloadPath);
 
-      skin.erase(it, skin.end());
-      skin += "/osuGen/";
-    }
-
-    cConfig->downloadPath = (char *)malloc(skin.size() + 1);
-    strcpy(cConfig->downloadPath, skin.c_str());
+    free(home);
 
     return cConfig;
   } catch (...) {
@@ -70,6 +67,10 @@ void free_config(Config *config) {
       free(config->commands[i]);
     }
     free(config->commands);
+  }
+
+  if (config->downloadPath) {
+    free(config->downloadPath);
   }
 
   if (config->osuSkin) {
