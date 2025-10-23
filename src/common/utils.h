@@ -1,5 +1,7 @@
-#pragma once
+#ifndef UTILS_H
+#define UTILS_H
 
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -8,7 +10,7 @@
 extern "C" {
 #endif
 
-int mkdir_recursive(const char *path) {
+inline int mkdir_recursive(const char *path) {
   char tmp[1024];
   char *p = NULL;
   size_t len;
@@ -32,4 +34,6 @@ int mkdir_recursive(const char *path) {
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

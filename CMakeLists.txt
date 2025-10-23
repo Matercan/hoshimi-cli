@@ -65,6 +65,12 @@ pkg_check_modules(LIBZIP REQUIRED libzip)
 add_library(stb_impl OBJECT src/osu/stb_impl.c)
 set_target_properties(stb_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+add_library(utils OBJECT
+   src/common/utils.c
+   src/common/utils.h 
+   src/common/utils.hpp
+)
+
 # json_handler library
 add_library(json_handler SHARED
     src/common/json/json.hpp
@@ -86,6 +92,7 @@ target_include_directories(json_handler PRIVATE ${LIBZIP_INCLUDE_DIRS})
 add_library(osu SHARED
     src/osu/osu.c
     src/osu/osu.h
+    $<TARGET_OBJECTS:utils>
     $<TARGET_OBJECTS:stb_impl>
 )
 set_target_properties(osu PROPERTIES
@@ -101,11 +108,13 @@ target_link_libraries(osu
     json_handler
     Threads::Threads
     ${SndFile_LIBRARIES}
+    $<TARGET_OBJECTS:utils>
 )
 
 # osu-exe executable
 add_executable(osu-exe
     src/osu/osu_assembler.c
+    $<TARGET_OBJECTS:utils>
     $<TARGET_OBJECTS:stb_impl>
 )
 set_target_properties(osu-exe PROPERTIES
@@ -126,6 +135,7 @@ target_link_libraries(osu-exe
 # hoshimi executable
 add_executable(hoshimi
     src/main.cpp
+    $<TARGET_OBJECTS:utils>
     $<TARGET_OBJECTS:stb_impl>
 )
 set_target_properties(hoshimi PROPERTIES

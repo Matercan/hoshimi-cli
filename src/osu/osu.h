@@ -3,8 +3,6 @@
 
 #include "circles.h"
 #include "hitsounds.h"
-#include "sys/stat.h"
-#include <dirent.h>
 
 inline void genOsu(void *foo) {
   Config *config = load_config();

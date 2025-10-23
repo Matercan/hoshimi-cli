@@ -1,23 +1,9 @@
+#define UTILS_H_DEF
 #include "utils.h"
 
-int mkdir_recursive(const char *path) {
-  char tmp[1024];
-  char *p = NULL;
-  size_t len;
+#ifdef __cplusplus
 
-  snprintf(tmp, sizeof(tmp), "%s", path);
-  len = strlen(tmp);
+#define UTILS_HPP_DEF
+#include "utils.hpp"
 
-  if (tmp[len - 1] == '/')
-    tmp[len - 1] = 0;
-
-  for (p = tmp + 1; *p; p++) {
-    if (*p == '/' || *p == '\\') {
-      *p = 0;
-      mkdir(tmp, 0755);
-      *p = '/';
-    }
-  }
-  mkdir(tmp, 0755);
-  return 0;
-}
+#endif
