@@ -75,8 +75,15 @@ inline hoshimi_error_t *init_err(const int code, const char *source) {
 }
 
 inline char *hoshimi_error_strerror(hoshimi_error_t *error) {
+  if (error == NULL) {
+    return strdup("Error: NULL error object");
+  }
+
   char value[128];
-  snprintf(value, sizeof(value), "%s: %s", error->source, error->string);
+  const char *source = error->source ? error->source : "unknown";
+  const char *string = error->string ? error->string : "unknown error";
+
+  snprintf(value, sizeof(value), "%s: %s", source, string);
   return strdup(value);
 }
 

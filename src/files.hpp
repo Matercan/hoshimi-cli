@@ -2,6 +2,7 @@
 #include "common/json/json.hpp"
 #include "common/utils/utils.h"
 #include "common/utils/utils.hpp"
+#include <cstdlib>
 #include <filesystem>
 #include <mutex>
 #include <thread>
@@ -34,8 +35,10 @@ public:
     std::ifstream f(dotfile.string());
 
     if (!f.is_open()) {
+      char *err = hoshimi_error_strerror(init_err(2, dotfile.c_str()));
       HERR("install " + dotfile.string())
           << hoshimi_error_strerror(init_err(2, dotfile.c_str())) << std::endl;
+      free(err);
       return false;
     }
 
@@ -247,9 +250,11 @@ private:
       try {
         fs::create_directories(home_equivalent.parent_path());
       } catch (const fs::filesystem_error &e) {
+        char *err =
+            hoshimi_error_strerror(init_err(4, dir_entry.path().c_str()));
         HERR("install " + dir_entry.path().string())
-            << hoshimi_error_strerror(init_err(4, dir_entry.path().c_str()))
-            << ": " << e.what() << std::endl;
+            << err << ": " << e.what() << std::endl;
+        free(err);
         return;
       }
 
@@ -357,9 +362,11 @@ private:
         }
       } catch (const fs::filesystem_error &e) {
         if (verbose) {
+          char *err =
+              hoshimi_error_strerror(init_err(4, dir_entry.path().c_str()));
           HERR("install " + dir_entry.path().string())
-              << hoshimi_error_strerror(init_err(4, dir_entry.path().c_str()))
-              << ": " << e.what() << std::endl;
+              << err << ": " << e.what() << std::endl;
+          free(err);
         }
         continue;
       }
@@ -409,9 +416,10 @@ public:
                        std::vector<std::string> notPackages, bool verbose,
                        bool onlyPackages) {
     if (!fs::exists(DOTFILES_DIRECTORY)) {
-      HERR("Install " + DOTFILES_DIRECTORY.string())
-          << hoshimi_error_strerror(init_err(1, DOTFILES_DIRECTORY.c_str()))
-          << std::endl;
+      char *err =
+          hoshimi_error_strerror(init_err(1, DOTFILES_DIRECTORY.c_str()));
+      HERR("Install " + DOTFILES_DIRECTORY.string()) << err << std::endl;
+      free(err);
       return 1;
     }
 
@@ -464,9 +472,11 @@ public:
         }
       }
     } catch (const fs::filesystem_error &e) {
+      char *err =
+          hoshimi_error_strerror(init_err(2, DOTFILES_DIRECTORY.c_str()));
       HERR("install " + DOTFILES_DIRECTORY.string())
-          << hoshimi_error_strerror(init_err(2, DOTFILES_DIRECTORY.c_str()))
-          << ": " << e.what() << std::endl;
+          << err << ": " << e.what() << std::endl;
+      free(err);
       return 1;
     }
 
@@ -511,8 +521,9 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
-      HERR("Config " + file.string())
-          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
+      char *err = hoshimi_error_strerror(init_err(2, file.c_str()));
+      HERR("Config " + file.string()) << err << std::endl;
+      free(err);
     }
 
     std::string s;
@@ -532,8 +543,10 @@ public:
     std::ifstream f(file.string());
 
     if (!f.is_open()) {
+      char *err = hoshimi_error_strerror(init_err(2, file.c_str()));
       HERR("Config " + file.string())
           << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
+      free(err);
     }
 
     std::string s;
@@ -550,8 +563,9 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config " + file.string())
-          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
+      char *err = hoshimi_error_strerror(init_err(2, file.c_str()));
+      HERR("Config " + file.string()) << err << std::endl;
+      free(err);
       return false;
     }
 
@@ -564,8 +578,9 @@ public:
     std::ofstream o(filePath);
 
     if (!o.is_open()) {
-      HERR("Config " + file.string())
-          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
+      char *err = hoshimi_error_strerror(init_err(2, file.c_str()));
+      HERR("Config " + file.string()) << err << std::endl;
+      free(err);
       return;
     }
 
@@ -579,8 +594,9 @@ public:
     std::ofstream o(file.string());
 
     if (!o.is_open()) {
-      HERR("Config " + file.string())
-          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
+      char *err = hoshimi_error_strerror(init_err(2, file.c_str()));
+      HERR("Config " + file.string()) << err << std::endl;
+      free(err);
       return;
     }
 
@@ -859,8 +875,10 @@ public:
     if (!exit_code) {
       std::string source = "Config" + file.string();
       hoshimi_error_t *err = init_err(3, "Config");
-      HERR(source) << hoshimi_error_strerror(err) << std::endl;
+      char *err_s = hoshimi_error_strerror(err);
+      HERR(source) << err_s << std::endl;
       free_hoshimi_error(err);
+      free(err_s);
     }
     return exit_code;
   }
@@ -868,8 +886,10 @@ public:
     if (!replaceValue(key, value, nullptr)) {
       std::string source = "Config" + file.string();
       hoshimi_error_t *error = init_err(3, "Config");
-      HERR(source) << hoshimi_error_strerror(error) << std::endl;
+      char *err_s = hoshimi_error_strerror(error);
+      HERR(source) << err_s << std::endl;
       free_hoshimi_error(error);
+      free(err_s);
       exitCode = false;
     }
   }
@@ -878,8 +898,10 @@ public:
     if (!replaceValue(key, value, afterLine)) {
       std::string source = "Config" + file.string();
       hoshimi_error_t *error = init_err(3, "Config");
-      HERR(source) << hoshimi_error_strerror(error) << std::endl;
+      char *err_s = hoshimi_error_strerror(error);
+      HERR(source) << err_s << std::endl;
       free_hoshimi_error(error);
+      free(err_s);
       exitCode = false;
     }
   }
