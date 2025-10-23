@@ -117,25 +117,23 @@ inline int mkdir_recursive(const char *path) {
 }
 
 inline static char *getHoshimiHome(int *err) {
-  const char *home_env = getenv("HOME");
-  if (err == NULL) {
-    err = (int *)malloc(sizeof(int));
-    *err = 0;
-  }
+  int local_err = 0;                     // Local error tracking
+  int *err_ptr = err ? err : &local_err; // Use provided err or local
 
+  const char *home_env = getenv("HOME");
   if (!home_env) {
-    *err = 1;
+    *err_ptr = 1;
+    return NULL; // Return NULL on error
   }
 
   const char *xdg_data_home = getenv("XDG_DATA_HOME");
-  char hoshimi_home[64];
+  char hoshimi_home[512]; // Increased buffer size for safety
+
   if (xdg_data_home && dir_exists(xdg_data_home, NULL)) {
     snprintf(hoshimi_home, sizeof(hoshimi_home), "%s/hoshimi", xdg_data_home);
-  } else if (*err != 1) {
+  } else {
     snprintf(hoshimi_home, sizeof(hoshimi_home), "%s/.local/share/hoshimi",
              home_env);
-  } else {
-    *err = 2;
   }
 
   return strdup(hoshimi_home);

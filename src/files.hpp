@@ -1,7 +1,7 @@
 #include "common/colorscheme.hpp"
 #include "common/json/json.hpp"
-#include "common/utils.h"
-#include "common/utils.hpp"
+#include "common/utils/utils.h"
+#include "common/utils/utils.hpp"
 #include <filesystem>
 #include <mutex>
 #include <thread>
@@ -62,8 +62,10 @@ private:
         HOME = std::string(home_env);
       }
 
-      int err;
-      HOSHIMI_HOME = getHoshimiHome(&err);
+      int err = 0;
+      char *home = getHoshimiHome(&err);
+      HOSHIMI_HOME = home;
+      free(home);
 
       if (err != 2 && !dir_exists(HOSHIMI_HOME.c_str(), &err)) {
         const std::string DOWNLOAD_COMMAND =
@@ -968,9 +970,10 @@ public:
 
     shellWriter->replaceWithChecking("wallpaper",
                                      "\"" + config.wallpaper + "\"", exitCode);
+    char *home = getHoshimiHome(NULL);
     shellWriter->replaceValue(
-        "osuDirectory",
-        "\"" + std::string(getHoshimiHome(NULL)) + "/assets/osuGen\"", nullptr);
+        "osuDirectory", "\"" + std::string(home) + "/assets/osuGen\"", nullptr);
+    free(home);
 
     if (!shellWriter->write()) {
       exitCode = false;

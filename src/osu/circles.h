@@ -1,7 +1,7 @@
 
 #include "../common/json/json_wrapper.h"
+#include "../common/utils/utils.h"
 
-#include "../common/utils.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 #include <pthread.h>
@@ -169,6 +169,9 @@ int generateCircles(Config *config) {
     return 1;
   }
 
+  free(hitCirclePath);
+  free(circleOverlayPath);
+
   unsigned char *numbers[10];
   int nw[10], nh[10];
 
@@ -266,8 +269,10 @@ int generateCircles(Config *config) {
   for (int i = 0; i < thread_count; i++) {
     pthread_attr_destroy(&attrs[i]);
   }
+
   free(threads);
   free(attrs);
+  free_colorscheme(colors);
 
   // Cleanup
   stbi_image_free(hitcircle);

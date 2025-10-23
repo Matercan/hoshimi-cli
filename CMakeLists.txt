@@ -66,9 +66,9 @@ add_library(stb_impl OBJECT src/osu/stb_impl.c)
 set_target_properties(stb_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_library(utils OBJECT
-   src/common/utils.c
-   src/common/utils.h 
-   src/common/utils.hpp
+   src/common/utils/utils.c
+   src/common/utils/utils.h 
+   src/common/utils/utils.hpp
 )
 
 # json_handler library

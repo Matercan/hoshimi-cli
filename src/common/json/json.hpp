@@ -16,8 +16,8 @@
 #include <zip.h>
 
 #include "../colorscheme.hpp"
-#include "../utils.h"
-#include "../utils.hpp"
+#include "../utils/utils.h"
+#include "../utils/utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -82,7 +82,8 @@ inline char *get_common_prefix(zip_t *archive) {
   return prefix;
 }
 
-inline int extract_zipped_file(char *filename, char *destdir, zip_t *archive) {
+inline int extract_zipped_file(const char *filename, const char *destdir,
+                               zip_t *archive) {
 
   int index = zip_name_locate(archive, filename, 0);
 
@@ -208,6 +209,7 @@ private:
         }
       }
     }
+    cJSON_free(overrideItem);
   }
 
   // Load theme configuration with base config merging
@@ -311,16 +313,13 @@ public:
 
     THEME_CONFIG_FILE = THEMES_PATH / (themeName + ".json");
     THEME_CONFIG_JSON = loadThemeConfig(themeName.c_str());
-    const char *themeJson = cJSON_Print(THEME_CONFIG_JSON);
-    std::ofstream o("tmp/theme.json");
-    o << themeJson;
   }
 
   std::string getThemePath() { return THEME_CONFIG_FILE.string(); }
 
   ~JsonHandlerBase() {
-    cJSON_free(THEME_CONFIG_JSON);
-    cJSON_free(MAIN_CONFIG_JSON);
+    cJSON_Delete(THEME_CONFIG_JSON);
+    cJSON_Delete(MAIN_CONFIG_JSON);
   }
 
 protected:
@@ -488,7 +487,7 @@ public:
 
           char *outPath = recursively_locate_osu_file(out_path, skin);
 
-          extract_zipped_file(outPath, strdup("osu/"), skin);
+          extract_zipped_file(outPath, "osu/", skin);
 
           free(outPath);
         }
@@ -503,7 +502,7 @@ public:
       // hitcircle
       internal = recursively_locate_osu_file("hitcircle.png", skin);
       if (internal) {
-        extract_zipped_file(internal, strdup("osu"), skin);
+        extract_zipped_file(internal, "osu", skin);
         free(internal);
       } else {
         HERR("JSON") << "hitcircle.png not found inside archive" << std::endl;
@@ -512,7 +511,7 @@ public:
       // hitcircleoverlay
       internal = recursively_locate_osu_file("hitcircleoverlay.png", skin);
       if (internal) {
-        extract_zipped_file(internal, strdup("osu"), skin);
+        extract_zipped_file(internal, "osu", skin);
         free(internal);
       } else {
         HERR("JSON") << "hitcircleoverlay.png not found inside archive"
@@ -525,7 +524,8 @@ public:
         snprintf(buf, sizeof(buf), "default-%d.png", i);
         internal = recursively_locate_osu_file(buf, skin);
         if (internal) {
-          extract_zipped_file(internal, strdup("osu/fonts/hitcircle"), skin);
+
+          extract_zipped_file(internal, "osu/fonts/hitcircle", skin);
           free(internal);
         } else {
           HERR("JSON") << "" << buf << " not found inside archive" << std::endl;
@@ -545,13 +545,14 @@ private:
 
 public:
   ColorsHandler() {
-    colors = cJSON_GetObjectItemCaseSensitive(THEME_CONFIG_JSON, "colors");
+    colors = cJSON_Duplicate(
+        cJSON_GetObjectItemCaseSensitive(THEME_CONFIG_JSON, "colors"), true);
     if (!colors) {
       throw std::runtime_error("Nonexistant 'colors' object");
     }
   }
 
-  ~ColorsHandler() { cJSON_free(colors); }
+  ~ColorsHandler() { cJSON_Delete(colors); }
 
   Colorscheme getColors() {
 

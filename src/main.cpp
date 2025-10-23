@@ -1,4 +1,4 @@
-#include "common/utils.hpp"
+#include "common/utils/utils.hpp"
 #include "files.hpp"
 #include "osu/osu.h"
 #include "version.h"
@@ -473,7 +473,8 @@ void getPackageInfo(int argc, std::vector<Flag> &config, char *argv[]) {
   for (int i = 2; i < argc; ++i) {
     if (argc == 2)
       break;
-    int packagesArgument, noPackagesArgument, maxCommandsArgument;
+    int packagesArgument = -1, noPackagesArgument = -1,
+        maxCommandsArgument = -1;
 
     for (size_t j = 0; j < config.size(); ++j) {
       if (count(config[j].args.begin(), config[j].args.end(), argv[i])) {

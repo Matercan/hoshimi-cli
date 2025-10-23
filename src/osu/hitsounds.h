@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../common/json/json_wrapper.h"
-#include "../common/utils.h"
+#include "../common/utils/utils.h"
 
 #include <sndfile.h>
 #include <stdio.h>
