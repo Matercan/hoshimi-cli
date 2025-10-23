@@ -316,6 +316,11 @@ public:
 
   std::string getThemePath() { return THEME_CONFIG_FILE.string(); }
 
+  ~JsonHandlerBase() {
+    cJSON_free(THEME_CONFIG_JSON);
+    cJSON_free(MAIN_CONFIG_JSON);
+  }
+
 protected:
   fs::path CONFIG_DIRECTORY_PATH;
   fs::path THEMES_PATH;
@@ -334,11 +339,6 @@ public:
   ShellHandler() {
     themeConfig = THEME_CONFIG_JSON;
     mainConfig = MAIN_CONFIG_JSON;
-  }
-
-  ~ShellHandler() {
-    cJSON_free(themeConfig);
-    cJSON_free(mainConfig);
   }
 
   struct CustomWriter {
@@ -413,7 +413,6 @@ public:
     if (!found)
       config.wallpaper = "";
 
-    // commands (safe)
     cJSON *commandsJson = getObj(THEME_CONFIG_JSON, "commands");
     if (commandsJson && cJSON_IsArray(commandsJson)) {
       for (cJSON *cmd = commandsJson->child; cmd; cmd = cmd->next) {
@@ -423,7 +422,6 @@ public:
       }
     }
 
-    // writers (safe)
     cJSON *writersJson = getObj(THEME_CONFIG_JSON, "writers");
     if (writersJson && cJSON_IsArray(writersJson)) {
       for (cJSON *writer = writersJson->child; writer; writer = writer->next) {
