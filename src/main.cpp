@@ -130,8 +130,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  fs::remove_all("tmp/*");
-
   getPackageInfo(argc, config, argv);
   std::string command = argv[1];
 
@@ -316,7 +314,7 @@ int main(int argc, char *argv[]) {
     }
 
     genOsu(nullptr);
-    fs::remove_all("osu");
+    Utils::destroyOsuDir(NULL);
     return 0;
 
   } else if (command == "version") {
@@ -356,7 +354,7 @@ void sourceConfig(std::vector<Flag> config) {
         GhosttyWriter().writeConfig();
       } else if (packages[i] == "quickshell") {
         genOsu(nullptr);
-        fs::remove_all("osu");
+        Utils::destroyOsuDir(NULL);
         QuickshellWriter qs;
         qs.writeColors();
         qs.writeShell();
@@ -379,7 +377,7 @@ void sourceConfig(std::vector<Flag> config) {
         notPackages.end()) {
       QuickshellWriter *qs = new QuickshellWriter();
       genOsu(nullptr);
-      fs::remove_all("osu");
+      Utils::destroyOsuDir(NULL);
       qs->writeColors();
       qs->writeShell();
       delete qs;
@@ -413,7 +411,7 @@ void sourceConfig(std::vector<Flag> config) {
 
     QuickshellWriter *qs = new QuickshellWriter();
     genOsu(nullptr);
-    fs::remove_all("osu");
+    Utils::destroyOsuDir(NULL);
     qs->writeColors();
     qs->writeShell();
     delete qs;
@@ -430,6 +428,7 @@ void sourceConfig(std::vector<Flag> config) {
   if (config[NO_COMMANDS].present)
     return;
   auto shellConfig = ShellHandler().getConfig();
+  Utils::destroyOsuDir(NULL);
   for (size_t i = 0; i < shellConfig.commands.size(); ++i) {
     commandsRun++;
 
@@ -584,7 +583,7 @@ void restart(std::vector<Flag> &config) {
   }
 
   genOsu(nullptr);
-  fs::remove_all("osu");
+  Utils::destroyOsuDir(NULL);
 
   system("killall qs; \n "
          "nohup  qs > /dev/null 2>&1 &");

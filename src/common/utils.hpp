@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sys/ioctl.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -97,7 +98,16 @@ public:
   }
 
   static void destroyOsuDir(int *err) {
-    fs::remove_all(fs::current_path() / "osu/");
+    auto osu_path = fs::current_path() / "osu/";
+
+    std::error_code ec;
+    fs::remove_all(osu_path, ec);
+
+    if (ec) {
+      HERR("Files") << ec.message() << std::endl;
+      if (err)
+        *err = ec.value();
+    }
   }
 
   std::vector<std::string> COLOR_NAMES = {

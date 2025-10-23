@@ -958,6 +958,8 @@ public:
     if (!exitCode)
       colorsWriter->revert();
 
+    utils.destroyOsuDir(NULL);
+
     return exitCode;
   }
 
