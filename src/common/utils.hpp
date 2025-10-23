@@ -1,11 +1,14 @@
 #pragma once
 
 #include <algorithm>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <vector>
+
+namespace fs = std::filesystem;
 
 // Logging helpers: use like `HLOG("Install") << "Found " << n << " files" <<
 // std::endl;`
@@ -91,6 +94,10 @@ public:
     // ending
     return fullString.compare(fullString.size() - ending.size(), ending.size(),
                               ending) == 0;
+  }
+
+  static void destroyOsuDir(int *err) {
+    fs::remove_all(fs::current_path() / "osu/");
   }
 
   std::vector<std::string> COLOR_NAMES = {

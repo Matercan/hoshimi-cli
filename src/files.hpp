@@ -1,5 +1,6 @@
 #include "common/colorscheme.hpp"
 #include "common/json/json.hpp"
+#include "common/utils.h"
 #include "common/utils.hpp"
 #include <filesystem>
 #include <mutex>
@@ -34,7 +35,7 @@ public:
 
     if (!f.is_open()) {
       HERR("install " + dotfile.string())
-          << "Error opening file" << "." << std::endl;
+          << hoshimi_error_strerror(init_err(2, dotfile.c_str())) << std::endl;
       return false;
     }
 
@@ -61,16 +62,10 @@ private:
         HOME = std::string(home_env);
       }
 
-      const char *xdg_data_home = getenv("XDG_DATA_HOME");
-      if (xdg_data_home && fs::exists(xdg_data_home)) {
-        HOSHIMI_HOME = std::string(xdg_data_home) + "/hoshimi";
-      } else if (!HOME.empty()) {
-        HOSHIMI_HOME = HOME + "/.local/share/hoshimi";
-      } else {
-        HOSHIMI_HOME = std::string{};
-      }
+      int err;
+      HOSHIMI_HOME = getHoshimiHome(&err);
 
-      if (!HOSHIMI_HOME.empty() && !fs::exists(HOSHIMI_HOME)) {
+      if (err != 2 && !dir_exists(HOSHIMI_HOME.c_str(), &err)) {
         const std::string DOWNLOAD_COMMAND =
             "git clone https://github.com/Matercan/hoshimi-dots.git " +
             HOSHIMI_HOME;
@@ -251,8 +246,8 @@ private:
         fs::create_directories(home_equivalent.parent_path());
       } catch (const fs::filesystem_error &e) {
         HERR("install " + dir_entry.path().string())
-            << "Filesystem error creating parent directories: " << e.what()
-            << std::endl;
+            << hoshimi_error_strerror(init_err(4, dir_entry.path().c_str()))
+            << ": " << e.what() << std::endl;
         return;
       }
 
@@ -360,8 +355,9 @@ private:
         }
       } catch (const fs::filesystem_error &e) {
         if (verbose) {
-          HERR(std::string("install") + dir_entry.path().string())
-              << "Filesystem error: " << e.what() << std::endl;
+          HERR("install " + dir_entry.path().string())
+              << hoshimi_error_strerror(init_err(4, dir_entry.path().c_str()))
+              << ": " << e.what() << std::endl;
         }
         continue;
       }
@@ -412,7 +408,8 @@ public:
                        bool onlyPackages) {
     if (!fs::exists(DOTFILES_DIRECTORY)) {
       HERR("Install " + DOTFILES_DIRECTORY.string())
-          << " Directory not found." << std::endl;
+          << hoshimi_error_strerror(init_err(1, DOTFILES_DIRECTORY.c_str()))
+          << std::endl;
       return 1;
     }
 
@@ -465,8 +462,9 @@ public:
         }
       }
     } catch (const fs::filesystem_error &e) {
-      HERR("Install " + DOTFILES_DIRECTORY.string())
-      " Filesystem error: " << e.what() << std::endl;
+      HERR("install " + DOTFILES_DIRECTORY.string())
+          << hoshimi_error_strerror(init_err(2, DOTFILES_DIRECTORY.c_str()))
+          << ": " << e.what() << std::endl;
       return 1;
     }
 
@@ -512,7 +510,7 @@ public:
 
     if (!f.is_open()) {
       HERR("Config " + file.string())
-          << " File opening unsuccessful" << std::endl;
+          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
     }
 
     std::string s;
@@ -533,7 +531,7 @@ public:
 
     if (!f.is_open()) {
       HERR("Config " + file.string())
-          << " File opening unsuccessful" << std::endl;
+          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
     }
 
     std::string s;
@@ -551,7 +549,7 @@ public:
 
     if (!o.is_open()) {
       HERR("Config " + file.string())
-          << " File opening unsuccessful" << std::endl;
+          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
       return false;
     }
 
@@ -564,7 +562,8 @@ public:
     std::ofstream o(filePath);
 
     if (!o.is_open()) {
-      HERR("Config " + filePath) << " File opening unsuccessful" << std::endl;
+      HERR("Config " + file.string())
+          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
       return;
     }
 
@@ -579,7 +578,7 @@ public:
 
     if (!o.is_open()) {
       HERR("Config " + file.string())
-          << " File opening unsuccessful" << std::endl;
+          << hoshimi_error_strerror(init_err(2, file.c_str())) << std::endl;
       return;
     }
 
@@ -856,37 +855,30 @@ public:
   bool replaceWithChecking(std::string key, std::string value) {
     bool exit_code = replaceValue(key, value, nullptr);
     if (!exit_code) {
-      HERR("Config " + file.string())
-          << " Value of " << key << " not changed." << std::endl;
-      write("tmp/" + key + file.filename().string());
-      HLOG("Config " + file.string()) << " Current contents written to /tmp/" +
-                                             key + file.filename().string()
-                                      << std::endl;
+      std::string source = "Config" + file.string();
+      hoshimi_error_t *err = init_err(3, "Config");
+      HERR(source) << hoshimi_error_strerror(err) << std::endl;
+      free_hoshimi_error(err);
     }
     return exit_code;
   }
   void replaceWithChecking(std::string key, std::string value, bool &exitCode) {
     if (!replaceValue(key, value, nullptr)) {
-      HERR("Config " + file.string())
-          << " Value of " << key << " not changed." << std::endl;
+      std::string source = "Config" + file.string();
+      hoshimi_error_t *error = init_err(3, "Config");
+      HERR(source) << hoshimi_error_strerror(error) << std::endl;
+      free_hoshimi_error(error);
       exitCode = false;
-      write("tmp/" + key + file.filename().string());
-      HLOG("Config " + file.string()) << " Current contents written to tmp/" +
-                                             key + file.filename().string()
-                                      << std::endl;
     }
   }
   void replaceWithChecking(std::string key, std::string value,
                            std::string afterLine, bool &exitCode) {
     if (!replaceValue(key, value, afterLine)) {
-      HERR("Config " + file.string())
-          << "Value of " << key << " after line containing " << afterLine
-          << " not changed. " << std::endl;
+      std::string source = "Config" + file.string();
+      hoshimi_error_t *error = init_err(3, "Config");
+      HERR(source) << hoshimi_error_strerror(error) << std::endl;
+      free_hoshimi_error(error);
       exitCode = false;
-      write("tmp/" + key + file.filename().string());
-      HLOG("Config " + file.string()) << " Current contents written to tmp/" +
-                                             key + file.filename().string()
-                                      << std::endl;
     }
   }
 };
@@ -957,8 +949,10 @@ public:
 
     if (!colorsWriter->write()) {
       exitCode = false;
-      std::cerr << "Error writing to file: "
-                << colorsWriter->getFile().filename() << std::endl;
+      HERR(colorsWriter->getFile().filename())
+          << hoshimi_error_strerror(
+                 init_err(2, colorsWriter->getFile().filename().c_str()))
+          << std::endl;
     }
 
     if (!exitCode)
@@ -973,12 +967,14 @@ public:
     shellWriter->replaceWithChecking("wallpaper",
                                      "\"" + config.wallpaper + "\"", exitCode);
     shellWriter->replaceValue(
-        "osuDirectory", "\"" + config.osuSkin + "/../osuGen" + "\"", nullptr);
+        "osuDirectory",
+        "\"" + std::string(getHoshimiHome(NULL)) + "/assets/osuGen\"", nullptr);
 
     if (!shellWriter->write()) {
       exitCode = false;
-      HERR("Config " + shellWriter->getFile().string())
-          << "Error writing to file." << std::endl;
+      std::string source = "Config " + shellWriter->getFile().string();
+      hoshimi_error_t *err = init_err(2, "Config");
+      HERR(source) << hoshimi_error_strerror(err) << std::endl;
     }
 
     if (!exitCode)
@@ -1054,7 +1050,8 @@ public:
       exitCode = false;
 
       HERR("Config " + writer.getFile().string())
-          << "Error writing to file." << std::endl;
+          << hoshimi_error_strerror(init_err(2, writer.getFile().c_str()))
+          << std::endl;
     }
 
     if (!exitCode)
@@ -1107,9 +1104,9 @@ public:
     }
 
     if (!writer.write()) {
-      exitCode = false;
       HERR("Config " + writer.getFile().string())
-          << "Error writing to file." << std::endl;
+          << hoshimi_error_strerror(init_err(2, writer.getFile().c_str()))
+          << std::endl;
     }
 
     if (!exitCode)
@@ -1161,7 +1158,8 @@ public:
     if (!writer.write()) {
       exitCode = false;
       HERR("Config " + writer.getFile().string())
-          << "Error writing to file." << std::endl;
+          << hoshimi_error_strerror(init_err(3, writer.getFile().c_str()))
+          << std::endl;
     }
 
     if (!exitCode)
@@ -1236,7 +1234,8 @@ public:
     bool retVal = writer.write();
 
     if (!retVal) {
-      HERR("Config " + path.string()) << "Error writing to file." << std::endl;
+      HERR("Config " + path.string())
+          << hoshimi_error_strerror(init_err(3, path.c_str())) << std::endl;
       writer.revert();
       return false;
     }

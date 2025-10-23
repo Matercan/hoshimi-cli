@@ -2,13 +2,97 @@
 #define UTILS_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // CPP
+
+#include "dirent.h"
+#include "errno.h"
+#include "stdbool.h"
+
+inline bool dir_exists(const char *path, int *err) {
+  DIR *dir = opendir(path);
+  if (dir) {
+    closedir(dir);
+    return true;
+  } else if (!err) {
+    return false;
+  } else if (ENOENT == errno) {
+    return false;
+    *err = 2;
+  } else {
+    return false;
+    *err = -1;
+  }
+}
+
+struct hoshimi_error {
+  int hosh_err;
+  int sys_err;
+  char *string;
+  char *source;
+} typedef hoshimi_error_t;
+
+inline void hoshimi_error_init(hoshimi_error_t *error, int code,
+                               const char *source) {
+  error->hosh_err = code;
+  error->sys_err = code;
+  error->source = strdup(source);
+
+  switch (code) {
+  case 0:
+    error->string = strdup("No error");
+    break;
+  case 1:
+    error->string = strdup("Hoshimi home does not exist");
+    break;
+  case 2:
+    error->string = strdup("File not found");
+    break;
+  case 3:
+    error->string = strdup("File not changed");
+    break;
+  case 4:
+    error->string = strdup("Filesystem error");
+    break;
+  case -1:
+    error->string = strdup("Unknown error");
+    break;
+  case -2:
+    error->string = strdup("Failed to run command");
+  }
+}
+
+inline hoshimi_error_t *init_err(const int code, const char *source) {
+  hoshimi_error_t *err = (hoshimi_error_t *)malloc(sizeof(hoshimi_error_t *));
+  hoshimi_error_init(err, code, source);
+  return err;
+}
+
+inline char *hoshimi_error_strerror(hoshimi_error_t *error) {
+  char value[128];
+  snprintf(value, sizeof(value), "%s: %s", error->source, error->string);
+  return strdup(value);
+}
+
+inline int free_hoshimi_error(hoshimi_error_t *error) {
+  if (!error)
+    return -1;
+
+  if (error->string)
+    free(error->string);
+  if (error->source)
+    free(error->source);
+
+  free(error);
+
+  return 0;
+}
 
 inline int mkdir_recursive(const char *path) {
   char tmp[1024];
@@ -32,8 +116,33 @@ inline int mkdir_recursive(const char *path) {
   return 0;
 }
 
+inline static char *getHoshimiHome(int *err) {
+  const char *home_env = getenv("HOME");
+  if (err == NULL) {
+    err = (int *)malloc(sizeof(int));
+    *err = 0;
+  }
+
+  if (!home_env) {
+    *err = 1;
+  }
+
+  const char *xdg_data_home = getenv("XDG_DATA_HOME");
+  char hoshimi_home[64];
+  if (xdg_data_home && dir_exists(xdg_data_home, NULL)) {
+    snprintf(hoshimi_home, sizeof(hoshimi_home), "%s/hoshimi", xdg_data_home);
+  } else if (*err != 1) {
+    snprintf(hoshimi_home, sizeof(hoshimi_home), "%s/.local/share/hoshimi",
+             home_env);
+  } else {
+    *err = 2;
+  }
+
+  return strdup(hoshimi_home);
+}
+
 #ifdef __cplusplus
 }
-#endif
+#endif // CPP
 
-#endif
+#endif // UTILS_H
