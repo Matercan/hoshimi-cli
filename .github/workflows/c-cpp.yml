@@ -29,19 +29,13 @@ jobs:
 
     
     - name: Create build directory
-      run: mkdir build-static
+      run: mkdir build
     
     - name: Configure CMake
-      run: cmake -DCMAKE_BUILD_TYPE=Static -B build-static
+      run: cmake -DCMAKE_BUILD_TYPE=Debug -B build
 
     - name: Build
-      run: cmake --build build-static --config build-static --target all
-    
-    - name: Test (optional)
-      run: |
-        cd build
-        # This will come soon
-        
+      run: cmake --build build --config build --target all    
     
     - name: Upload artifacts (optional)
       uses: actions/upload-artifact@v4
