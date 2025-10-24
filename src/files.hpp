@@ -501,8 +501,8 @@ public:
                      verbose, packages, notPackages, onlyPackages);
       } else {
         if (verbose) {
-          std::cerr << "Warning: failed to stat " << dir_entry.path()
-                    << ": " << ec.message() << std::endl;
+          std::cerr << "Warning: failed to stat " << dir_entry.path() << ": "
+                    << ec.message() << std::endl;
         }
       }
     }
