@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "circles.h"
@@ -6,12 +7,15 @@
 
 int main(const int argc, const char **argv) {
   Config *config = load_config();
-  config->downloadPath = (char *)realloc(config->downloadPath, sizeof("osuGen/"));
-  config->downloadPath = "osuGen/";
+
+  free(config->downloadPath);
+  config->downloadPath = strdup("osuGen");
   mkdir_recursive(config->downloadPath);
 
   generateCircles(config);
   generateSounds(config);
+
+  free_config(config);
 
   rmrf("osu");
 }

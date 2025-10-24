@@ -23,4 +23,5 @@ flamegraph*
 temp**
 tmp**
 *.png
-osu/**
+osu** 
+osuGen**
