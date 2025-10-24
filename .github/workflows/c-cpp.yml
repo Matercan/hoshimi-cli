@@ -32,10 +32,10 @@ jobs:
       run: mkdir build
     
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      run: cmake -DCMAKE_BUILD_TYPE=Static -B build-static
 
     - name: Build
-      run: cmake --build build --config Release --target all
+      run: cmake --build build --config build-static --target all
     
     - name: Test (optional)
       run: |
