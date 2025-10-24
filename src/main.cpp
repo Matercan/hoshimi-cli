@@ -40,6 +40,8 @@ enum Flags {
   MAX_COMMANDS
 };
 
+
+
 void print_help(const std::string &program_name,
                 const std::vector<Flag> &config) {
   std::cout << "Hoshimi - Hyprland Dotfiles Manager\n";

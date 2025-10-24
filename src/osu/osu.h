@@ -4,12 +4,14 @@
 #include "circles.h"
 #include "hitsounds.h"
 
-inline void genOsu(void *foo) {
-  Config *config = load_config();
 
-  generateSounds(config);
-  generateCircles(config);
-  free_config(config);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void genOsu(void*);
+
+#ifdef __cplusplus
 }
-
+#endif
 #endif

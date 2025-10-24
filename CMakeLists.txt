@@ -66,7 +66,7 @@ add_library(stb_impl OBJECT src/osu/stb_impl.c)
 set_target_properties(stb_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_library(utils OBJECT
-   src/common/utils/utils.c
+   src/common/utils/utils_impl.c
    src/common/utils/utils.h 
    src/common/utils/utils.hpp
 )
@@ -79,6 +79,7 @@ add_library(json_handler SHARED
 )
 set_target_properties(json_handler PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    POSITION_INDEPENDENT_CODE ON
 )
 target_compile_options(json_handler PRIVATE
     "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
@@ -90,20 +91,22 @@ target_link_libraries(json_handler zip)
 target_include_directories(json_handler PRIVATE ${LIBZIP_INCLUDE_DIRS})
 
 # osu library
-add_library(osu SHARED
-    src/osu/osu.c
-    src/osu/osu.h
+add_library(osu_impl OBJECT
+    src/osu/osu_impl.c
+    src/osu/osu.h 
+    src/osu/circles.h 
+    src/osu/hitsounds.h
     $<TARGET_OBJECTS:stb_impl>
 )
-set_target_properties(osu PROPERTIES
+set_target_properties(osu_impl PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
-target_include_directories(osu PUBLIC src/osu)
-target_compile_options(osu PRIVATE
+target_include_directories(osu_impl PUBLIC src/osu)
+target_compile_options(osu_impl PRIVATE
     "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
     "$<${msvc_cxx}:-Wformat=2>"
 )
-target_link_libraries(osu
+target_link_libraries(osu_impl
     m
     json_handler
     Threads::Threads
@@ -124,7 +127,7 @@ target_compile_options(osu-exe PRIVATE
 )
 target_include_directories(osu-exe PRIVATE ${SndFile_INCLUDE_DIRS})
 target_link_libraries(osu-exe
-    osu
+  $<TARGET_OBJECTS:osu_impl>
     m
     json_handler
     ${SndFile_LIBRARIES}
@@ -134,7 +137,9 @@ target_link_libraries(osu-exe
 add_executable(hoshimi
     src/main.cpp
     $<TARGET_OBJECTS:stb_impl>
+    $<TARGET_OBJECTS:osu_impl>
 )
+
 set_target_properties(hoshimi PROPERTIES
     INSTALL_RPATH "$ORIGIN/../lib"
     BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}/bin"
@@ -152,7 +157,6 @@ target_include_directories(hoshimi PRIVATE
 )
 target_link_libraries(hoshimi
     json_handler
-    osu
     cjson
     m
     Threads::Threads
@@ -160,7 +164,7 @@ target_link_libraries(hoshimi
 )
 
 # Install targets
-install(TARGETS json_handler osu LIBRARY DESTINATION lib)
+install(TARGETS json_handler LIBRARY DESTINATION lib)
 install(TARGETS hoshimi RUNTIME DESTINATION bin)
 install(FILES completions/hoshimi.fish DESTINATION share/fish/vendor_completions.d)
 install(FILES completions/_hoshimi DESTINATION share/zsh/site-functions)

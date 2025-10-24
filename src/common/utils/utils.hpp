@@ -5,7 +5,6 @@
 #include <iomanip>
 #include <iostream>
 #include <sys/ioctl.h>
-#include <thread>
 #include <unistd.h>
 #include <vector>
 
