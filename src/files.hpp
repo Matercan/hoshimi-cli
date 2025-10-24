@@ -490,8 +490,21 @@ public:
 
     for (auto const &dir_entry :
          fs::recursive_directory_iterator(DOTFILES_DIRECTORY)) {
-      installDirectory(dir_entry, processed, total_files, progress_bar_active,
-                       verbose, packages, notPackages, onlyPackages);
+      std::error_code ec;
+      if (fs::is_directory(dir_entry.path(), ec) && !ec) {
+        installDirectory(dir_entry, processed, total_files, progress_bar_active,
+                         verbose, packages, notPackages, onlyPackages);
+      } else if (!ec) {
+        // Direct file entry: process directly to avoid skipping files when
+        // installDirectory expects a directory
+        install_file(dir_entry, processed, total_files, progress_bar_active,
+                     verbose, packages, notPackages, onlyPackages);
+      } else {
+        if (verbose) {
+          std::cerr << "Warning: failed to stat " << dir_entry.path()
+                    << ": " << ec.message() << std::endl;
+        }
+      }
     }
 
     // Clear progress bar at the end
