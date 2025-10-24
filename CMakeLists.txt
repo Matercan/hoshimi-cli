@@ -75,6 +75,7 @@ add_library(utils OBJECT
 add_library(json_handler SHARED
     src/common/json/json.hpp
     src/common/json/json_wrapper.cpp
+    $<TARGET_OBJECTS:utils>
 )
 set_target_properties(json_handler PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
@@ -92,7 +93,6 @@ target_include_directories(json_handler PRIVATE ${LIBZIP_INCLUDE_DIRS})
 add_library(osu SHARED
     src/osu/osu.c
     src/osu/osu.h
-    $<TARGET_OBJECTS:utils>
     $<TARGET_OBJECTS:stb_impl>
 )
 set_target_properties(osu PROPERTIES
@@ -108,13 +108,11 @@ target_link_libraries(osu
     json_handler
     Threads::Threads
     ${SndFile_LIBRARIES}
-    $<TARGET_OBJECTS:utils>
 )
 
 # osu-exe executable
 add_executable(osu-exe
     src/osu/osu_assembler.c
-    $<TARGET_OBJECTS:utils>
     $<TARGET_OBJECTS:stb_impl>
 )
 set_target_properties(osu-exe PROPERTIES
@@ -135,7 +133,6 @@ target_link_libraries(osu-exe
 # hoshimi executable
 add_executable(hoshimi
     src/main.cpp
-    $<TARGET_OBJECTS:utils>
     $<TARGET_OBJECTS:stb_impl>
 )
 set_target_properties(hoshimi PROPERTIES
