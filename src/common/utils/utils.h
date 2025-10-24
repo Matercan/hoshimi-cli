@@ -69,7 +69,7 @@ inline void hoshimi_error_init(hoshimi_error_t *error, int code,
 }
 
 inline hoshimi_error_t *init_err(const int code, const char *source) {
-  hoshimi_error_t *err = (hoshimi_error_t *)malloc(sizeof(hoshimi_error_t *));
+  hoshimi_error_t *err = (hoshimi_error_t *)malloc(sizeof(hoshimi_error_t));
   hoshimi_error_init(err, code, source);
   return err;
 }
