@@ -18,14 +18,14 @@ typedef struct {
 } AudioBuffer;
 
 // Load a WAV file into memory
-AudioBuffer *load_audio(const char *path); 
+AudioBuffer *load_audio(const char *path);
 
 // Mix two audio buffers together
-AudioBuffer *mix_audio(AudioBuffer *a, AudioBuffer *b) ;
+AudioBuffer *mix_audio(AudioBuffer *a, AudioBuffer *b);
 // Save audio buffer to WAV file
 int save_audio(const char *path, AudioBuffer *buf);
 
-void free_audio(AudioBuffer *buf); 
+void free_audio(AudioBuffer *buf);
 int generateSounds(Config *config);
 
 #endif

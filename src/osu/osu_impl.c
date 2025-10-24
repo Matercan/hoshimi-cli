@@ -2,7 +2,9 @@
 #define CIRCLES_IMPL
 #include "circles.h"
 
-void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx, int dy, int dst_w, int dst_h) {  for (int y = 0; y < h; y++) {
+void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx,
+               int dy, int dst_w, int dst_h) {
+  for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
       int dst_x = dx + x;
       int dst_y = dy + y;
@@ -30,7 +32,7 @@ void composite(unsigned char *dst, unsigned char *src, int w, int h, int dx, int
   }
 }
 
-void tint_image(unsigned char *img, int w, int h, ColorRGB tint)  {
+void tint_image(unsigned char *img, int w, int h, ColorRGB tint) {
   for (int i = 0; i < w * h * 4; i += 4) {
     img[i] = (img[i] * tint.r) / 255;
     img[i + 1] = (img[i + 1] * tint.g) / 255;
@@ -260,7 +262,7 @@ int generateCircles(Config *config) {
 #define SOUNDS_IMPL
 #include "hitsounds.h"
 
-AudioBuffer *load_audio(const char* path) {
+AudioBuffer *load_audio(const char *path) {
   SF_INFO sfinfo;
   memset(&sfinfo, 0, sizeof(sfinfo));
 
@@ -286,7 +288,7 @@ AudioBuffer *load_audio(const char* path) {
   return buf;
 }
 
-AudioBuffer* mix_audio(AudioBuffer *a, AudioBuffer *b) {
+AudioBuffer *mix_audio(AudioBuffer *a, AudioBuffer *b) {
   if (!a)
     return b;
   if (!b)
@@ -460,4 +462,3 @@ void genOsu(void *foo) {
   generateCircles(config);
   free_config(config);
 }
-

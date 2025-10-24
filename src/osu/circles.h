@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 typedef struct CircleInfo {
   const char *name;
   int hw;

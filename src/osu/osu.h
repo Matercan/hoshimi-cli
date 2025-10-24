@@ -4,12 +4,11 @@
 #include "circles.h"
 #include "hitsounds.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void genOsu(void*);
+void genOsu(void *);
 
 #ifdef __cplusplus
 }
