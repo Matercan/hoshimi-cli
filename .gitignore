@@ -1,6 +1,7 @@
 # binaries
 
 build/
+build-static/
 *.out
 *-bin
 
