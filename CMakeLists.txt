@@ -12,10 +12,10 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -s")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -s")
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -67,9 +67,11 @@ set_target_properties(stb_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_library(utils OBJECT
    src/common/utils/utils_impl.c
-   src/common/utils/utils.h 
+   src/common/utils/utils.h
    src/common/utils/utils.hpp
 )
+
+set_target_properties(utils PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # json_handler library
 add_library(json_handler SHARED
@@ -93,8 +95,8 @@ target_include_directories(json_handler PRIVATE ${LIBZIP_INCLUDE_DIRS})
 # osu library
 add_library(osu_impl OBJECT
     src/osu/osu_impl.c
-    src/osu/osu.h 
-    src/osu/circles.h 
+    src/osu/osu.h
+    src/osu/circles.h
     src/osu/hitsounds.h
     $<TARGET_OBJECTS:stb_impl>
 )
@@ -149,7 +151,7 @@ target_compile_options(hoshimi PRIVATE
     "$<${gcc_like_cxx}:-Wconversion-null;-Wunused-result;-Wformat=2>"
     "$<${msvc_cxx}:-Wformat=2>"
 )
-target_include_directories(hoshimi PRIVATE 
+target_include_directories(hoshimi PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     Boost::headers
     ${cJSON_INCLUDE_DIRS}
@@ -166,5 +168,7 @@ target_link_libraries(hoshimi
 # Install targets
 install(TARGETS json_handler LIBRARY DESTINATION lib)
 install(TARGETS hoshimi RUNTIME DESTINATION bin)
-install(FILES completions/hoshimi.fish DESTINATION share/fish/vendor_completions.d)
+install(FILES completions/hoshimi.fish
+  DESTINATION share/fish/vendor_completions.d
+)
 install(FILES completions/_hoshimi DESTINATION share/zsh/site-functions)

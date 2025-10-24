@@ -2,6 +2,8 @@
 #define UTILS_H_DEF
 #include "utils.h"
 
+#include "dirent.h"
+#include "errno.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -132,6 +134,17 @@ char *getHoshimiHome(int *err) {
 
   return strdup(hoshimi_home);
 }
+
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag,
+              struct FTW *ftwbuf) {
+  int rv = remove(fpath);
+  if (rv)
+    perror(fpath);
+  return rv;
+}
+
+int rmrf(char *path) { return nftw(path, unlink_cb, 64, FTW_DEPTH | FTW_PHYS); }
+
 #endif
 
 #ifdef __cplusplus

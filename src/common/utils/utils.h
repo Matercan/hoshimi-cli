@@ -5,9 +5,12 @@
 extern "C" {
 #endif // CPP
 
-#include "dirent.h"
-#include "errno.h"
 #include "stdbool.h"
+
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
+
+#include <ftw.h>
 
 typedef struct hoshimi_error {
   int hosh_err;
@@ -23,6 +26,9 @@ char *hoshimi_error_strerror(hoshimi_error_t *error);
 int free_hoshimi_error(hoshimi_error_t *error);
 int mkdir_recursive(const char *path);
 char *getHoshimiHome(int *err);
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag,
+              struct FTW *ftwbuf);
+int rmrf(char *path);
 
 #ifdef __cplusplus
 }
