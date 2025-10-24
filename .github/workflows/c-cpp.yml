@@ -25,17 +25,17 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential libboost-dev libjsoncpp-dev pkg-config libcjson-dev libsndfile1-dev libzip-dev
+        sudo apt-get install -y cmake build-essential libboost-dev tar pkg-config libcjson-dev libsndfile1-dev libzip-dev
 
     
     - name: Create build directory
-      run: mkdir build
+      run: mkdir build-static
     
     - name: Configure CMake
       run: cmake -DCMAKE_BUILD_TYPE=Static -B build-static
 
     - name: Build
-      run: cmake --build build --config build-static --target all
+      run: cmake --build build-static --config build-static --target all
     
     - name: Test (optional)
       run: |
