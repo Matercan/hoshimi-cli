@@ -12,6 +12,7 @@
 #include <libgen.h>
 #include <ostream>
 #include <regex>
+#include <string>
 #include <sys/stat.h>
 #include <zip.h>
 
@@ -212,34 +213,111 @@ private:
     cJSON_free(overrideItem);
   }
 
+  enum Ordering {
+    FIRST,
+    LAST,
+    STANDARD,
+  };
+
+  typedef struct Additionals {
+    std::vector<std::string> first_additionals;
+    std::vector<std::string> standard_additionals;
+    std::vector<std::string> last_additionals;
+  } additionals_t;
+
+  Ordering getOrdering(cJSON *json) {
+    if (!json) {
+      return STANDARD;
+    }
+
+    cJSON *orderingItem = cJSON_GetObjectItemCaseSensitive(json, "ordering");
+    if (!orderingItem || !cJSON_IsString(orderingItem)) {
+      return STANDARD;
+    }
+
+    std::string value = orderingItem->valuestring;
+
+    if (value == "first") {
+      return FIRST;
+    }
+    if (value == "last") {
+      return LAST;
+    }
+    return STANDARD;
+  }
+
+  // Get all of the json files. For example the config catppuccin/latte will
+  // have the config files *.json and catppuccin/*.json
+  additionals_t getAllJsonPaths(const char *themeName) {
+    std::vector<std::string> dirs;
+    std::vector<std::string> results;
+
+    boost::split(dirs, themeName, boost::is_any_of("/"),
+                 boost::token_compress_on);
+
+    // Add the base "*.json" path
+    results.push_back("*.json");
+
+    // Build progressive paths
+    for (size_t i = 1; i < dirs.size(); ++i) {
+      std::string stream;
+      for (size_t j = 0; j < i; ++j) {
+        if (j > 0)
+          stream += '/';
+        stream += dirs[j];
+      }
+      stream += "/*.json";
+      results.push_back(stream);
+    }
+
+    additionals_t values;
+
+    for (auto it : results) {
+      cJSON *results_json = getJsonFromFile(it.c_str());
+
+      if (getOrdering(results_json) == Ordering::FIRST) {
+        values.first_additionals.push_back(it);
+      } else if (getOrdering(results_json) == Ordering::STANDARD) {
+        values.standard_additionals.push_back(it);
+      } else {
+        values.last_additionals.push_back(it);
+      }
+
+      cJSON_Delete(results_json);
+    }
+
+    return values;
+  }
+
   // Load theme configuration with base config merging
   cJSON *loadThemeConfig(const char *themeName) {
     // Build paths
     std::string themeDir = std::string(THEMES_PATH) + "/" + themeName;
-
-    std::vector<std::string> themeDirParts;
-    std::string defaultDirStr;
-    boost::algorithm::split(themeDirParts, themeDir, boost::is_any_of("/\\"));
-
-    for (size_t i = 0; i < themeDirParts.size() - 1; ++i) {
-      boost::algorithm::trim(themeDirParts[i]);
-      defaultDirStr += themeDirParts[i] + '/';
-    }
-
-    defaultDirStr += "*.json";
-
+    additionals_t additionalJson = getAllJsonPaths(themeName);
     std::string themeConfigPath = themeDir + ".json";
-
     // Start with an empty object
     cJSON *mergedConfig = cJSON_CreateObject();
 
-    // First, load the defaults/*.json file if it exists
-    std::string defaultsFile = defaultDirStr;
-    cJSON *defaultConfig = getJsonFromFile(defaultsFile.c_str());
-    if (defaultConfig) {
-      deepMergeCJSON(mergedConfig, defaultConfig);
-      cJSON_Delete(defaultConfig);
-    }
+    auto merge = [&](std::vector<std::string> additionals) -> void {
+      for (auto it : additionals) {
+        std::string defaultFile = std::string(THEMES_PATH) + '/' + it;
+        HLOG("JSON") << std::string(THEMES_PATH) << std::endl;
+        HLOG("JSON") << "theme file " << defaultFile << std::endl;
+        if (!fs::exists(defaultFile)) {
+          continue;
+        }
+        std::cout << "FILE: " << defaultFile.c_str() << std::endl;
+        cJSON *defaultConfig = getJsonFromFile(defaultFile.c_str());
+        if (defaultConfig) {
+          deepMergeCJSON(mergedConfig, defaultConfig);
+          cJSON_Delete(defaultConfig);
+        }
+      }
+    };
+
+    merge(additionalJson.first_additionals);
+    merge(additionalJson.standard_additionals);
+    merge(additionalJson.last_additionals);
 
     // Then, load and merge the theme-specific config
     cJSON *themeConfig = getJsonFromFile(themeConfigPath.c_str());

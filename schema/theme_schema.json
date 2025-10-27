@@ -18,6 +18,14 @@
         "type": "string"
       }
     },
+    "ordering": {
+      "type": "string",
+      "enum": [
+        "first",
+        "last",
+        "standard"
+      ]
+    },
     "writers": {
       "type": "array",
       "description": "Special strings to append at the end of a writer",
