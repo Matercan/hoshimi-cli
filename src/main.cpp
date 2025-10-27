@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -464,6 +465,21 @@ void getConfigArg(int argc, char *argv[], bool &setB, std::string &configArg,
       setB = false;
       configArg = argv[i];
     } else {
+      if (argv[i][0] == '-') {
+        continue;
+      }
+      if (argv[i] == std::to_string(maxFollowupCommands)) {
+        continue;
+      }
+      if (std::find(packages.begin(), packages.end(), argv[i]) !=
+          packages.end()) {
+        continue;
+      }
+      if (std::find(notPackages.begin(), notPackages.end(), argv[i]) !=
+          notPackages.end()) {
+        continue;
+      }
+
       vec.push_back(argv[i]);
     }
   }
